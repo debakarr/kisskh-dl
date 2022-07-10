@@ -14,23 +14,35 @@ def kisskh():
 
 
 @kisskh.command()
-@click.argument("drama_url")
-@click.option("--episodes", "-e", "episode_range", metavar="<int>:<int>")
+@click.argument("drama_url_or_name")
+@click.option(
+    "--episodes",
+    "-e",
+    "episode_range",
+    metavar="<int>:<int>",
+    help="range of episodes to download.",
+)
 @click.option(
     "--quality",
     "-q",
     default="1080p",
     type=click.Choice(["360p", "480p", "540p", "720p", "1080p"]),
+    help="Quality of the video to be downloaded.",
 )
-@click.option("--output-dir", "-o", default=Path.home() / "Downloads")
-def dl(drama_url: str, episode_range: str | None, quality: str, output_dir) -> None:
+@click.option(
+    "--output-dir",
+    "-o",
+    default=Path.home() / "Downloads",
+    help="Output directory where downloaded files will be store.",
+)
+def dl(drama_url_or_name: str, episode_range: str | None, quality: str, output_dir) -> None:
     kisskh_api = KissKHApi()
-    if validators.url(drama_url):
-        parsed_url = urlparse(drama_url)
+    if validators.url(drama_url_or_name):
+        parsed_url = urlparse(drama_url_or_name)
         drama_id = parse_qs(parsed_url.query)["id"][0]
         drama_name = parsed_url.path.split("/")[-1].replace("-", "_")
     else:
-        dramas = kisskh_api.get_dramas(drama_url)
+        dramas = kisskh_api.get_dramas(drama_url_or_name)
         for index, drama_name in enumerate(dramas.values()):
             print(f"{index + 1}. {drama_name}")
         selected = int(input("Please select one from above: "))
