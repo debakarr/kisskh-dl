@@ -5,8 +5,15 @@ Simple downloaded for https://kisskh.me/
 ---
 
 ## Installation
+
 ```console
 pip install kisskh-downloader
+```
+
+Right now we are using playwright to parse the response. We have to install one of the chromium channel for this.
+
+```console
+playwright install chrome
 ```
 
 ---
@@ -20,7 +27,8 @@ kisskh dl --help
 Usage: kisskh dl [OPTIONS] DRAMA_URL_OR_NAME
 
 Options:
-  -e, --episodes <int>:<int>      range of episodes to download.
+  -f, --first INTEGER             Starting episode number.
+  -l, --last INTEGER              Ending episode number.
   -q, --quality [360p|480p|540p|720p|1080p]
                                   Quality of the video to be downloaded.
   -o, --output-dir TEXT           Output directory where downloaded files will
@@ -49,12 +57,12 @@ Please select one from above: 1
 
 Downloads episode 4 to 8 of `Alchemy of Souls` in 720p:
 ```console
-kisskh dl "https://kisskh.me/Drama/Alchemy-of-Souls?id=5043" -e 4:8 -q 720p
+kisskh dl "https://kisskh.me/Drama/Alchemy-of-Souls?id=5043" -f 4 -l 8 -q 720p
 ```
 
 Downloads episode 3 of `A Business Proposal` in 720p:
 ```console
-kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -e 3 -q 720p
+kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p
 ```
 
 ---
