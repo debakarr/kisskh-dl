@@ -13,6 +13,8 @@ pip install kisskh-downloader
 
 ## Usage
 
+> **NOTE:** As of now the video files downloaded are in `[.ts](https://en.wikipedia.org/wiki/MPEG_transport_stream)` format. You can still use players like [VLC](https://www.videolan.org/) to play the video.
+
 ### Direct download entire series in highest quality available
 
 ```console
@@ -45,6 +47,7 @@ kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -e 3 -q 720p
 ---
 
 # TODO
+- [ ] Add ability to export video in other format using ffmpeg
 - [ ] Add unit test
 - [ ] Handle Ctrl + C signal in terminal
 - [ ] Throw appropriate exception or handles it somehow
