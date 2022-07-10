@@ -37,7 +37,7 @@ Downloads episode 4 to 8 of `Alchemy of Souls` in 720p:
 kisskh dl "https://kisskh.me/Drama/Alchemy-of-Souls?id=5043" -e 4:8 -q 720p
 ```
 
-Downloads episode 3 of `Alchemy of Souls` in 720p:
+Downloads episode 3 of `A Business Proposal` in 720p:
 ```console
 kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -e 3 -q 720p
 ```
