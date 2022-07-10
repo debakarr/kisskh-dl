@@ -2,7 +2,7 @@
 name = "kisskh-downloader"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Debakar Roy <allinonedibakar@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -10,9 +10,21 @@ playwright = "^1.23.0"
 tqdm = "^4.64.0"
 requests = "^2.28.1"
 m3u8 = "^2.0.0"
+click = "^8.1.3"
+validators = "^0.20.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest-cov = "^3.0.0"
+flake8 = "^4.0.1"
+black = "^22.6.0"
+flake8-bugbear = "^22.7.1"
+flake8-comprehensions = "^3.10.0"
+pep8-naming = "^0.13.0"
+flake8-isort = "^4.1.1"
+flake8-bandit = "^3.0.0"
+
+[tool.poetry.scripts]
+kisskh = "kisskh_downloader.cli:kisskh"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
