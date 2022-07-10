@@ -54,3 +54,4 @@ kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -e 3 -q 720p
     - [ ] In valid URL pass
     - [ ] Video file not present
 - [ ] Add option to download subtitles
+- [ ] Enable CI/CD for linting (flake8), formatting (black and isort) and security (bandit)
