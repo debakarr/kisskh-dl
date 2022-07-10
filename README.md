@@ -15,6 +15,19 @@ pip install kisskh-downloader
 
 > **NOTE:** As of now the video files downloaded are in [.ts](https://en.wikipedia.org/wiki/MPEG_transport_stream) format. You can still use players like [VLC](https://www.videolan.org/) to play the video.
 
+```console
+kisskh dl --help
+Usage: kisskh dl [OPTIONS] DRAMA_URL_OR_NAME
+
+Options:
+  -e, --episodes <int>:<int>      range of episodes to download.
+  -q, --quality [360p|480p|540p|720p|1080p]
+                                  Quality of the video to be downloaded.
+  -o, --output-dir TEXT           Output directory where downloaded files will
+                                  be store.
+  --help                          Show this message and exit.
+```
+
 ### Direct download entire series in highest quality available
 
 ```console
@@ -55,3 +68,5 @@ kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -e 3 -q 720p
     - [ ] Video file not present
 - [ ] Add option to download subtitles
 - [ ] Enable CI/CD for linting (flake8), formatting (black and isort) and security (bandit)
+- [ ] Add ability to export all download link
+- [ ] Add ability to open stream in some player
