@@ -22,6 +22,6 @@ class Search(BaseModel):
 
     def __getitem__(self, item):
         return self.__root__[item]
-    
+
     def __len__(self) -> int:
         return len(self.__root__)
