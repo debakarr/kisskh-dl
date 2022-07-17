@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -94,11 +95,17 @@ def dl(
         outfile = f"{output_dir}/{drama_name}/{drama_name}_"
         f"{downloadable_quality}_E{episode_number:02d}.ts"
         ms.download_playlist_segments(outfile, videos.get(downloadable_quality))
-        ffmpeg.input(outfile).output(
-            filename=f"{outfile[:-3]}.{convert_stream_to}", acodec="copy", vcodec="copy"
-        ).global_args("-loglevel", "quiet").run()
-        if not keep_stream_file:
-            os.remove(outfile)
+
+        found_ffmpeg = shutil.which("ffmpeg")
+
+        if found_ffmpeg:
+            ffmpeg.input(outfile).output(
+                filename=f"{outfile[:-3]}.{convert_stream_to}",
+                acodec="copy",
+                vcodec="copy",
+            ).global_args("-loglevel", "quiet").run()
+            if not keep_stream_file:
+                os.remove(outfile)
 
 
 if __name__ == "__main__":

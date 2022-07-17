@@ -10,17 +10,13 @@ Simple downloaded for https://kisskh.me/
 pip install kisskh-downloader
 ```
 
-Right now we are using playwright to parse the response. We have to install one of the chromium channel for this.
-
-```console
-playwright install chrome
-```
+Right now we are using ffmpeg to convert the downloaded stream file to some other format (.mp4, .mkv, .avi etc.). Follow the instruction [here](https://github.com/kkroening/ffmpeg-python#installing-ffmpeg) to install ffmpeg. Note if ffmpeg is not found then no conversion will take place. Also stream files will not be deleted.
 
 ---
 
-## Usage
+> **NOTE:** Although of now the video files downloaded are in [.ts](https://en.wikipedia.org/wiki/MPEG_transport_stream) format, you can still use players like [VLC](https://www.videolan.org/) to play the video.
 
-> **NOTE:** As of now the video files downloaded are in [.ts](https://en.wikipedia.org/wiki/MPEG_transport_stream) format. You can still use players like [VLC](https://www.videolan.org/) to play the video.
+## Usage
 
 ```console
 kisskh dl --help
