@@ -92,13 +92,13 @@ def dl(
         downloadable_quality = get_matching_quality(
             quality, videos.keys(), select_closest_available=force_download
         )
-        outfile = f"{output_dir}/{drama_name}/{drama_name}_"
-        f"{downloadable_quality}_E{episode_number:02d}.ts"
+        outfile = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}_{downloadable_quality}.ts"
         ms.download_playlist_segments(outfile, videos.get(downloadable_quality))
 
         found_ffmpeg = shutil.which("ffmpeg")
 
         if found_ffmpeg:
+            print(f"Converting stream to .{convert_stream_to} format...")
             ffmpeg.input(outfile).output(
                 filename=f"{outfile[:-3]}.{convert_stream_to}",
                 acodec="copy",
