@@ -28,9 +28,7 @@ class Drama(BaseModel):
     title: str
 
     def __init__(self, **data: Any) -> None:
-        data["episodes"] = sorted(
-            data["episodes"], key=lambda episode: episode["number"]
-        )
+        data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
         super().__init__(**data)
 
     def get_episodes_ids(self, start: int, stop: int) -> dict[int, tuple[str, str]]:
@@ -43,7 +41,4 @@ class Drama(BaseModel):
         for episode in self.episodes:
             episode_ids[episode.number] = episode.id
 
-        return {
-            episode_number: episode_ids[episode_number]
-            for episode_number in range(start, stop + 1)
-        }
+        return {episode_number: episode_ids[episode_number] for episode_number in range(start, stop + 1)}
