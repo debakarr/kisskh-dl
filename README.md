@@ -13,7 +13,8 @@ pip install -U kisskh-downloader
 ## :books: Usage
 
 ```console
-dl [OPTIONS] DRAMA_URL_OR_NAME
+kisskh dl --help
+Usage: kisskh dl [OPTIONS] DRAMA_URL_OR_NAME
 
 Options:
   -f, --first INTEGER             Starting episode number.
