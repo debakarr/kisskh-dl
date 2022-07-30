@@ -7,7 +7,7 @@ Simple downloaded for https://kisskh.me/
 ## :inbox_tray: Installation
 
 ```console
-pip install kisskh-downloader
+pip install -U kisskh-downloader
 ```
 
 ## :books: Usage
