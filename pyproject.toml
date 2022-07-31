@@ -23,6 +23,7 @@ pep8-naming = "^0.13.0"
 flake8-isort = "^4.1.1"
 flake8-bandit = "^3.0.0"
 datamodel-code-generator = {extras = ["http"], version = "^0.13.0"}
+flake8-black = "^0.3.3"
 
 [tool.black]
 line-length = 120

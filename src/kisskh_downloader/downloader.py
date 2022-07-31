@@ -10,7 +10,7 @@ from kisskh_downloader.models.sub import SubItem
 
 
 class Downloader:
-    def download_video_from_stream_url(self, video_stream_url: str, filepath: str, quality: str) -> None:
+    def download_video_from_stream_url(self,    video_stream_url: str, filepath: str, quality: str) -> None:
         """Download a video from stream url
 
         :param video_stream_url: stream url
