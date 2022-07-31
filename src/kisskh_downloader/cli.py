@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import List, Union
 from urllib.parse import parse_qs, urlparse
 
 import click
@@ -44,8 +45,8 @@ def dl(
     first: int,
     last: int,
     quality: str,
-    sub_langs: list[str],
-    output_dir: Path | str,
+    sub_langs: List[str],
+    output_dir: Union[Path, str],
 ) -> None:
     kisskh_api = KissKHApi()
     downloader = Downloader()
