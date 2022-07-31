@@ -21,6 +21,8 @@ jobs:
           poetry-version: ${{ matrix.poetry-version }}
       - name: Install dependencies
         run: poetry install
+      - name: Virtual environment info
+        run: poetry env info
       - name: Run flake8 (along with black, isort and bandit wrapper)
         run: poetry run flake8 src tests
       - name: Run mypy
