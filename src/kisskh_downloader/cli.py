@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import List, Union
 from urllib.parse import parse_qs, urlparse
 
 import click
@@ -44,18 +45,22 @@ def dl(
     first: int,
     last: int,
     quality: str,
-    sub_langs: list[str],
-    output_dir: Path | str,
+    sub_langs: List[str],
+    output_dir: Union[Path, str],
 ) -> None:
     kisskh_api = KissKHApi()
     downloader = Downloader()
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
-        drama_id = parse_qs(parsed_url.query)["id"][0]
+        drama_id = int(parse_qs(parsed_url.query)["id"][0])
         drama_name = parsed_url.path.split("/")[-1].replace("-", "_")
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
-        drama_id, drama_name = drama.id, drama.title
+        if drama is None:
+            print("No drama found with the query provided...")
+            return None
+        drama_id = drama.id
+        drama_name = drama.title
 
     episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
 

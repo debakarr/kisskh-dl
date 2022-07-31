@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -31,7 +31,7 @@ class Drama(BaseModel):
         data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
         super().__init__(**data)
 
-    def get_episodes_ids(self, start: int, stop: int) -> dict[int, tuple[str, str]]:
+    def get_episodes_ids(self, start: int, stop: int) -> Dict[int, int]:
         episode_ids = {}
         if start < self.episodes[0].number or start > self.episodes[-1].number:
             start = self.episodes[0].number

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List
 from urllib.parse import urlparse
 
 import requests
@@ -25,7 +26,7 @@ class Downloader:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download(video_stream_url)
 
-    def download_subtitles(self, subtitles: list[SubItem], filepath: str) -> None:
+    def download_subtitles(self, subtitles: List[SubItem], filepath: str) -> None:
         """Download subtitles
 
         :param subtitles: list of all subtitles
