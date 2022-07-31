@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-from urllib.parse import urlparse
 from typing import List
+from urllib.parse import urlparse
 
 import requests
 import yt_dlp

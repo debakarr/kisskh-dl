@@ -21,5 +21,9 @@ jobs:
           poetry-version: ${{ matrix.poetry-version }}
       - name: Install dependencies
         run: poetry install
-      - name: Run black, isort, bandit and flake8
+      - name: Run flake8 (along with black, isort and bandit wrapper)
         run: poetry run flake8 src tests
+      - name: Run mypy
+        run: poetry run mypy --ignore-missing-imports src
+      - name: Run pytest
+        run: poetry run pytest
