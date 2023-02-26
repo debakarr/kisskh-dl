@@ -60,8 +60,16 @@ kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720
 
 ---
 
+# :beetle: DEBUG
+
+Use -vv flag while running `kisskh dl`
+```console
+kisskh -vv dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p
+```
+
+---
+
 # :construction: TODO
 - [ ] Add unit test
-- [ ] Enable CI/CD for linting (flake8), formatting (black and isort) and security (bandit)
 - [ ] Add ability to export all download link
 - [ ] Add ability to open stream in some player
