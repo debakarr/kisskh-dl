@@ -1,3 +1,5 @@
+import json
+import logging
 import sys
 from typing import Dict, List, Optional
 from urllib.parse import urljoin
@@ -7,6 +9,8 @@ import requests
 from kisskh_downloader.models.drama import Drama
 from kisskh_downloader.models.search import DramaInfo, Search
 from kisskh_downloader.models.sub import Sub, SubItem
+
+logger = logging.getLogger(__name__)
 
 
 class KissKHApi:
@@ -57,9 +61,12 @@ class KissKHApi:
         :param url: url to do the get request on
         :return: reponse for a specific get request
         """
+        logger.debug(f"Making GET {url}")
         session = self._get_session()
         response = session.get(url)
         response.raise_for_status()
+        response_json = response.json()
+        logger.debug(f"Response: {json.dumps(response_json, indent=4)}")
         return response
 
     def get_episode_ids(self, drama_id: int, start: int = 1, stop: int = sys.maxsize) -> Dict[int, int]:
@@ -121,13 +128,13 @@ class KissKHApi:
         """
         dramas = self.search_dramas_by_query(query=query)
         if len(dramas) == 0:
-            print(f"No drama with query {query} found! " "Make sure you spelled everything correct.")
+            logger.warning(f"No drama with query {query} found! " "Make sure you spelled everything correct.")
             return None
 
         user_selection = 0
         while user_selection < 1 or user_selection > len(dramas) + 1:
             for index, drama in enumerate(dramas, start=1):
-                print(f"{index}. {drama.title}")
+                logger.info(f"{index}. {drama.title}")
 
             user_selection = int(input("Select a drama from above: "))
 

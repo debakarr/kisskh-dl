@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import List
@@ -21,7 +22,6 @@ class Downloader:
             "format": f"bestvideo[height<={quality[:-1]}]+bestaudio/best[height<={quality[:-1]}]/best",
             "concurrent_fragment_downloads": 15,
             "outtmpl": f"{filepath}.%(ext)s",
-            "postprocessors": [{"key": "FFmpegFixupM3u8"}],
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download(video_stream_url)
@@ -32,8 +32,9 @@ class Downloader:
         :param subtitles: list of all subtitles
         :param filepath: file path where to download
         """
+        logger = logging.getLogger(__name__)
         for subtitle in subtitles:
-            print(f"Downloading {subtitle.label} sub...")
+            logger.info(f"Downloading {subtitle.label} sub...")
             extension = os.path.splitext(urlparse(subtitle.src).path)[-1]
             response = requests.get(subtitle.src)
             Path(f"{filepath}.{subtitle.land}{extension}").write_bytes(response.content)

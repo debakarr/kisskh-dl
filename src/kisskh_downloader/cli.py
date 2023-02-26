@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 from typing import List, Union
@@ -12,8 +13,13 @@ from kisskh_downloader.kisskh_api import KissKHApi
 
 
 @click.group()
-def kisskh():
-    pass
+@click.option("-v", "--verbose", count=True, help="Increase log level verbosity")
+def kisskh(verbose):
+    logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+    if verbose == 1:
+        logging.getLogger().setLevel(logging.INFO)
+    elif verbose >= 2:
+        logging.getLogger().setLevel(logging.DEBUG)
 
 
 @kisskh.command()
@@ -48,6 +54,7 @@ def dl(
     sub_langs: List[str],
     output_dir: Union[Path, str],
 ) -> None:
+    logger = logging.getLogger(__name__)
     kisskh_api = KissKHApi()
     downloader = Downloader()
     if validators.url(drama_url_or_name):
@@ -57,7 +64,7 @@ def dl(
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
         if drama is None:
-            print("No drama found with the query provided...")
+            logger.warning("No drama found with the query provided...")
             return None
         drama_id = drama.id
         drama_name = drama.title
@@ -65,14 +72,15 @@ def dl(
     episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
 
     for episode_number, episode_id in episode_ids.items():
-        print(f"Getting details for Episode {episode_number}...")
+        logger.info(f"Getting details for Episode {episode_number}...")
         video_stream_url = kisskh_api.get_stream_url(episode_id)
         subtitles = kisskh_api.get_subtitles(episode_id, *sub_langs)
         if "tickcounter" in video_stream_url:
-            print(f"Episode {episode_number} still not released!")
+            logger.warning(f"Episode {episode_number} still not released!")
             continue
 
         filepath = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}"
+        logger.debug(f"Using video url: {video_stream_url}")
         downloader.download_video_from_stream_url(video_stream_url, filepath, quality)
         downloader.download_subtitles(subtitles, filepath)
 
