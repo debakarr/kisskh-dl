@@ -579,10 +579,17 @@ jinja2 = ">=2.10.1,<4.0"
 openapi-spec-validator = ">=0.2.8,<=0.5.1"
 packaging = "*"
 prance = ">=0.18.2,<1.0"
-pydantic = {version = ">=1.5.1,<2.0", extras = ["email"], markers = "python_version < \"3.10\""}
+pydantic = [
+    {version = ">=1.10.0,<2.0", extras = ["email"], markers = "python_version >= \"3.11\""},
+    {version = ">=1.5.1,<2.0", extras = ["email"], markers = "python_version < \"3.10\""},
+    {version = ">=1.9.0,<2.0", extras = ["email"], markers = "python_version >= \"3.10\" and python_version < \"3.11\""},
+]
 PySnooper = ">=0.4.1,<2.0.0"
 toml = ">=0.10.0,<1.0.0"
-typed-ast = {version = ">=1.4.2", markers = "python_full_version < \"3.9.8\""}
+typed-ast = [
+    {version = ">=1.5.0", markers = "python_full_version >= \"3.9.8\""},
+    {version = ">=1.4.2", markers = "python_full_version < \"3.9.8\""},
+]
 
 [package.extras]
 http = ["httpx"]
@@ -2011,5 +2018,5 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 
 [metadata]
 lock-version = "2.0"
-python-versions = "~3.8.1"
-content-hash = "dd3a6dda735c632fee6f926037b14e0c6b693be2a091aef0a66bcc4c93749f87"
+python-versions = "^3.8"
+content-hash = "a52204ba5f11e66e0272c345e6f95e4097b545f7465f00006891810496fb387d"
