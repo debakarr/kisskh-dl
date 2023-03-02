@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 from pathlib import Path
 from typing import List, Union
@@ -56,10 +57,20 @@ def dl(
 ) -> None:
     logger = logging.getLogger(__name__)
     kisskh_api = KissKHApi()
-    downloader = Downloader()
+    downloader = Downloader(referer="https://kisskh.me")
+    episode_ids = []
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
-        drama_id = int(parse_qs(parsed_url.query)["id"][0])
+        ids = parse_qs(parsed_url.query).get("id")
+        if ids is None:
+            raise FileNotFoundError("Not a valid url for a drama!")
+        drama_id = int(ids[0])
+        episode_id = parse_qs(parsed_url.query).get("ep")
+        episode_number = None
+        if episode_string := re.search(r"Episode-(\d+)", parsed_url.path):
+            episode_number = int(episode_string.group(1))
+        if episode_id and episode_number:
+            episode_ids = {episode_number: episode_id[0]}
         drama_name = parsed_url.path.split("/")[-1].replace("-", "_")
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
@@ -69,7 +80,8 @@ def dl(
         drama_id = drama.id
         drama_name = drama.title
 
-    episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
+    if not episode_ids:
+        episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
 
     for episode_number, episode_id in episode_ids.items():
         logger.info(f"Getting details for Episode {episode_number}...")
