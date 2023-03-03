@@ -70,6 +70,5 @@ kisskh -vv dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q
 ---
 
 # :construction: TODO
-- [ ] Add unit test
 - [ ] Add ability to export all download link
 - [ ] Add ability to open stream in some player

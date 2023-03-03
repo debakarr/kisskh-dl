@@ -25,6 +25,7 @@ pep8-naming = "^0.13.3"
 pytest-cov = "^4.0.0"
 mypy = "^1.0.1"
 black = "^23.1.0"
+types-requests = "^2.28.11.15"
 
 [tool.black]
 line-length = 120

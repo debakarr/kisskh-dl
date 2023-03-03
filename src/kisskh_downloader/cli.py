@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, List, Union
 from urllib.parse import parse_qs, urlparse
 
 import click
@@ -58,7 +58,7 @@ def dl(
     logger = logging.getLogger(__name__)
     kisskh_api = KissKHApi()
     downloader = Downloader(referer="https://kisskh.me")
-    episode_ids = []
+    episode_ids: Dict[int, int] = {}
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
         ids = parse_qs(parsed_url.query).get("id")
@@ -68,10 +68,10 @@ def dl(
         episode_id = parse_qs(parsed_url.query).get("ep")
         episode_number = None
         if episode_string := re.search(r"Episode-(\d+)", parsed_url.path):
-            episode_number = int(episode_string.group(1))
+            episode_number = episode_string.group(1)
         if episode_id and episode_number:
-            episode_ids = {episode_number: episode_id[0]}
-        drama_name = parsed_url.path.split("/")[-1].replace("-", "_")
+            episode_ids = {int(episode_number): int(episode_id[0])}
+        drama_name = parsed_url.path.split("/")[2].replace("-", "_")
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
         if drama is None:
@@ -83,10 +83,10 @@ def dl(
     if not episode_ids:
         episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
 
-    for episode_number, episode_id in episode_ids.items():
+    for episode_number, episode_id in episode_ids.items():  # type: ignore
         logger.info(f"Getting details for Episode {episode_number}...")
-        video_stream_url = kisskh_api.get_stream_url(episode_id)
-        subtitles = kisskh_api.get_subtitles(episode_id, *sub_langs)
+        video_stream_url = kisskh_api.get_stream_url(episode_id)  # type: ignore
+        subtitles = kisskh_api.get_subtitles(episode_id, *sub_langs)  # type: ignore
         if "tickcounter" in video_stream_url:
             logger.warning(f"Episode {episode_number} still not released!")
             continue
