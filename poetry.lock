@@ -1856,6 +1856,33 @@ files = [
 ]
 
 [[package]]
+name = "types-requests"
+version = "2.28.11.15"
+description = "Typing stubs for requests"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-requests-2.28.11.15.tar.gz", hash = "sha256:fc8eaa09cc014699c6b63c60c2e3add0c8b09a410c818b5ac6e65f92a26dde09"},
+    {file = "types_requests-2.28.11.15-py3-none-any.whl", hash = "sha256:a05e4c7bc967518fba5789c341ea8b0c942776ee474c7873129a61161978e586"},
+]
+
+[package.dependencies]
+types-urllib3 = "<1.27"
+
+[[package]]
+name = "types-urllib3"
+version = "1.26.25.8"
+description = "Typing stubs for urllib3"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-urllib3-1.26.25.8.tar.gz", hash = "sha256:ecf43c42d8ee439d732a1110b4901e9017a79a38daca26f08e42c8460069392c"},
+    {file = "types_urllib3-1.26.25.8-py3-none-any.whl", hash = "sha256:95ea847fbf0bf675f50c8ae19a665baedcf07e6b4641662c4c3c72e7b2edf1a9"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.5.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
@@ -2019,4 +2046,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "a52204ba5f11e66e0272c345e6f95e4097b545f7465f00006891810496fb387d"
+content-hash = "155d9bac7ecf2c869ef3de7db08ec7943c9a135ffcd6544277251bf8e1d06070"
