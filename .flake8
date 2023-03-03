@@ -1,4 +1,16 @@
 [flake8]
 max-line-length = 120
-ignore =
-    S101
+per-file-ignores = tests/*.py: E501, S101
+exclude =
+    .git
+    __pycache__
+    setup.py
+    build
+    dist
+    releases
+    .venv
+    .tox
+    .mypy_cache
+    .pytest_cache
+    .vscode
+    .github
