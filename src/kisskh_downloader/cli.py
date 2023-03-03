@@ -71,7 +71,7 @@ def dl(
             episode_number = int(episode_string.group(1))
         if episode_id and episode_number:
             episode_ids = {episode_number: episode_id[0]}
-        drama_name = parsed_url.path.split("/")[-1].replace("-", "_")
+        drama_name = parsed_url.path.split("/")[2].replace("-", "_")
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
         if drama is None:
