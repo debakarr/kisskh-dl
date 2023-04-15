@@ -60,7 +60,7 @@ def test_get_episode_ids(kisskh_api):
         10: 118960,
     }
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.me/api/DramaList/Drama/44377")
+    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/DramaList/Drama/44377")
 
     assert kisskh_api.get_episode_ids(44377, 10, 100) == {10: 118960, 11: 119505, 12: 119566, 13: 119964, 14: 120047}
 
@@ -112,7 +112,7 @@ def test_get_subtitles(kisskh_api):
         ),
     ]
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.me/api/Sub/18609")
+    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/Sub/18609")
 
     assert kisskh_api.get_subtitles(18609, "all") == [
         SubItem(
@@ -167,7 +167,7 @@ def test_search_dramas_by_query(kisskh_api):
 
     search_result = kisskh_api.search_dramas_by_query("Crash")
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.me/api/DramaList/Search?q=Crash")
+    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/DramaList/Search?q=Crash")
 
     assert search_result == Search(
         __root__=[
@@ -211,4 +211,4 @@ def test_get_stream_url(kisskh_api):
         == "https://hls05.hls1.online/hls05/e4b349db73114f317702a1bb1a8d7f93/ep.12.v0.1657615499.720.m3u8"
     )
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.me/api/DramaList/Episode/13915.png?err=false&ts=&time=")
+    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/DramaList/Episode/13915.png?err=false&ts=&time=")

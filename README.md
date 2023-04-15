@@ -3,7 +3,7 @@
 <div align="center">
    <img src="https://i.imgur.com/nhQtOZa.png">
    <br>
-   <strong><i>Simple downloaded for https://kisskh.me/</i></strong>
+   <strong><i>Simple downloaded for https://kisskh.co/</i></strong>
    <br>
    <a href="https://pypi.org/project/kisskh-downloader/">
    <img src="https://img.shields.io/pypi/v/kisskh-downloader?style=for-the-badge">
@@ -14,7 +14,7 @@
 
 ---
 
-👋 Welcome to the kisskh-downloader README! This package is a simple command-line tool for downloading shows from https://kisskh.me/. Here's everything you need to know to get started:
+👋 Welcome to the kisskh-downloader README! This package is a simple command-line tool for downloading shows from https://kisskh.co/. Here's everything you need to know to get started:
 
 ## 💻 Installation
 
@@ -48,7 +48,7 @@ Here are some examples:
 ### 🔗 Direct download entire series in highest quality available in current folder
 
 ```console
-kisskh dl "https://kisskh.me/Drama/Island-Season-2?id=7000" -o .
+kisskh dl "https://kisskh.co/Drama/Island-Season-2?id=7000" -o .
 ```
 
 ![Download all using URL](https://i.imgur.com/cvKYqK3.gif)
@@ -73,14 +73,14 @@ Please select one from above: 1
 
 Downloads episode 4 to 8 of `Alchemy of Souls` in 720p:
 ```console
-kisskh dl "https://kisskh.me/Drama/Alchemy-of-Souls?id=5043" -f 4 -l 8 -q 720p -o .
+kisskh dl "https://kisskh.co/Drama/Alchemy-of-Souls?id=5043" -f 4 -l 8 -q 720p -o .
 ```
 
 ![Download range of episodes](https://i.imgur.com/Q6697pa.gif)
 
 Downloads episode 3 of `A Business Proposal` in 720p:
 ```console
-kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p -o .
+kisskh dl "https://kisskh.co/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p -o .
 ```
 
 ![Download single episode](https://i.imgur.com/cNlED8m.gif)
@@ -88,7 +88,7 @@ kisskh dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720
 You can also dowload single episode by providing the episode URL
 
 ```console
-kisskh dl "https://kisskh.me/Drama/A-Business-Proposal/Episode-3?id=4608&ep=86439&page=0&pageSize=100" -o .
+kisskh dl "https://kisskh.co/Drama/A-Business-Proposal/Episode-3?id=4608&ep=86439&page=0&pageSize=100" -o .
 ```
 
 For more options, use the `--help` flag.
@@ -100,7 +100,7 @@ For more options, use the `--help` flag.
 To enable debugging, use the `-vv` flag while running `kisskh dl`.
 
 ```console
-kisskh -vv dl "https://kisskh.me/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p
+kisskh -vv dl "https://kisskh.co/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p
 ```
 
 ---

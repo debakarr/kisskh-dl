@@ -57,7 +57,7 @@ def dl(
 ) -> None:
     logger = logging.getLogger(__name__)
     kisskh_api = KissKHApi()
-    downloader = Downloader(referer="https://kisskh.me")
+    downloader = Downloader(referer="https://kisskh.co")
     episode_ids: Dict[int, int] = {}
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)

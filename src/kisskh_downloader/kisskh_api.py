@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class KissKHApi:
     def __init__(self):
-        self.base_url = "https://kisskh.me/api/"
+        self.base_url = "https://kisskh.co/api/"
         self.session = None
 
     def _drama_api_url(self, drama_id: int) -> str:

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "kisskh-downloader"
 version = "0.1.0"
-description = "Simple downloaded for https://kisskh.me/"
+description = "Simple downloaded for https://kisskh.co/"
 readme = "README.md"
 authors = ["Debakar Roy <allinonedibakar@gmail.com>"]
 
