@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import List
 from urllib.parse import urlparse
-
+from tenacity import retry, stop_after_attempt
 import requests
 import yt_dlp
 
@@ -16,6 +16,7 @@ class Downloader:
     def __init__(self, referer: str) -> None:
         self.referer = referer
 
+    @retry(stop=stop_after_attempt(7))
     def download_video_from_stream_url(self, video_stream_url: str, filepath: str, quality: str) -> None:
         """Download a video from stream url
 
