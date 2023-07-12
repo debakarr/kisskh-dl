@@ -29,6 +29,7 @@ class Downloader:
             "outtmpl": f"{filepath}.%(ext)s",
             "http_headers": {"Referer": self.referer},
             "verbose": logger.getEffectiveLevel() == logging.DEBUG,
+            "retries": 10,
         }
         logger.debug(f"Calling download with following options: {ydl_opts}")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
