@@ -93,9 +93,7 @@ kisskh dl "https://kisskh.co/Drama/A-Business-Proposal/Episode-3?id=4608&ep=8643
 
 For more options, use the `--help` flag.
 
----
-
-# Decrypting Subtitles
+### 📖 Decrypting Subtitles
 
 If you want to decrypt the downloaded subtitles, you need to pass the `--decrypt-subtitle` or `-ds` flag along with a decryption key and initialization vector. Check [#14](https://github.com/debakarr/kisskh-dl/issues/14).
 
