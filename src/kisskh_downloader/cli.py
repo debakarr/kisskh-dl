@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import sys
 from pathlib import Path
@@ -7,10 +8,14 @@ from urllib.parse import parse_qs, urlparse
 
 import click
 import validators
+from dotenv import load_dotenv
 
 from kisskh_downloader.downloader import Downloader
 from kisskh_downloader.enums.quality import Quality
+from kisskh_downloader.helper.decrypt_subtitle import SubtitleDecrypter
 from kisskh_downloader.kisskh_api import KissKHApi
+
+load_dotenv()
 
 
 @click.group()
@@ -47,6 +52,24 @@ def kisskh(verbose):
     default=Path.home() / "Downloads",
     help="Output directory where downloaded files will be store.",
 )
+@click.option(
+    "--decrypt-subtitle",
+    "-ds",
+    is_flag=True,
+    help="Decrypt the downloaded subtitle",
+)
+@click.option(
+    "--key",
+    "-k",
+    default=os.getenv("KISSKH_KEY"),
+    help="Decryption key",
+)
+@click.option(
+    "--initialization-vector",
+    "-iv",
+    default=os.getenv("KISSKH_INITIALIZATION_VECTOR"),
+    help="Initialization vector for decryption",
+)
 def dl(
     drama_url_or_name: str,
     first: int,
@@ -54,8 +77,20 @@ def dl(
     quality: str,
     sub_langs: List[str],
     output_dir: Union[Path, str],
+    decrypt_subtitle: bool,
+    key: str,
+    initialization_vector: str,
 ) -> None:
     logger = logging.getLogger(__name__)
+
+    if decrypt_subtitle and not (key and initialization_vector):
+        raise click.UsageError(
+            "--key and --initialization-vector must be provided when --decrypt-subtitle is set. "
+            "Either pass them or set them via KISSKH_KEY and KISSKH_INITIALIZATION_VECTOR environment variable."
+        )
+
+    decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector) if decrypt_subtitle else None
+
     kisskh_api = KissKHApi()
     downloader = Downloader(referer="https://kisskh.co")
     episode_ids: Dict[int, int] = {}
@@ -94,7 +129,7 @@ def dl(
         filepath = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}"
         logger.debug(f"Using video url: {video_stream_url}")
         downloader.download_video_from_stream_url(video_stream_url, filepath, quality)
-        downloader.download_subtitles(subtitles, filepath)
+        downloader.download_subtitles(subtitles, filepath, decrypter)
 
 
 if __name__ == "__main__":

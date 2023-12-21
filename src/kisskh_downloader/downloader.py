@@ -1,12 +1,13 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse
 
 import requests
 import yt_dlp
 
+from kisskh_downloader.helper.decrypt_subtitle import SubtitleDecrypter
 from kisskh_downloader.models.sub import SubItem
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,9 @@ class Downloader:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download(video_stream_url)
 
-    def download_subtitles(self, subtitles: List[SubItem], filepath: str) -> None:
+    def download_subtitles(
+        self, subtitles: List[SubItem], filepath: str, decrypter: Optional[SubtitleDecrypter] = None
+    ) -> None:
         """Download subtitles
 
         :param subtitles: list of all subtitles
@@ -45,4 +48,8 @@ class Downloader:
             logger.info(f"Downloading {subtitle.label} sub...")
             extension = os.path.splitext(urlparse(subtitle.src).path)[-1]
             response = requests.get(subtitle.src)
-            Path(f"{filepath}.{subtitle.land}{extension}").write_bytes(response.content)
+            output_path = Path(f"{filepath}.{subtitle.land}{extension}")
+            output_path.write_bytes(response.content)
+            if decrypter is not None:
+                decrypted_subtitle = decrypter.decrypt_subtitles(output_path)
+                decrypted_subtitle.save(output_path)

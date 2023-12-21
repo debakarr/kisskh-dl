@@ -95,6 +95,44 @@ For more options, use the `--help` flag.
 
 ---
 
+# Decrypting Subtitles
+
+If you want to decrypt the downloaded subtitles, you need to pass the `--decrypt-subtitle` or `-ds` flag along with a decryption key and initialization vector. Check [#14](https://github.com/debakarr/kisskh-dl/issues/14).
+
+Here is an example of how to pass these parameters from the command line:
+
+```bash
+kisskh download "<drama_url>" --decrypt-subtitle --key "your_key_here" --initialization-vector "your_iv_here"
+```
+
+You can also set these parameters as environment variables. If you set the `KISSKH_KEY` and `KISSKH_INITIALIZATION_VECTOR` environment variables, they will be used by default.
+
+Here is an example of how to set these environment variables:
+
+- On Linux/Mac:
+
+```bash
+export KISSKH_KEY="your_key_here"
+export KISSKH_INITIALIZATION_VECTOR="your_iv_here"
+```
+
+- On Windows:
+
+```cmd
+set KISSKH_KEY="your_key_here"
+set KISSKH_INITIALIZATION_VECTOR="your_iv_here"
+```
+
+After setting these environment variables, you can use the `--decrypt-subtitle` flag without passing the key and initialization vector explicitly:
+
+```bash
+kisskh download "Drama Name" --decrypt-subtitle
+```
+
+Please make sure to replace `"your_key_here"` and `"your_iv_here"` with your actual decryption key and initialization vector.
+
+---
+
 # 🐞 DEBUG
 
 To enable debugging, use the `-vv` flag while running `kisskh dl`.
