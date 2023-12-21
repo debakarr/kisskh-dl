@@ -1,8 +1,7 @@
 from base64 import b64decode, b64encode
-
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
 
 class AESCipher:
     def __init__(self, key, initialization_vector):
@@ -10,15 +9,21 @@ class AESCipher:
         self.initialization_vector = initialization_vector.encode("utf8")
 
     def __get_cipher(self):
-        return AES.new(self.key, AES.MODE_CBC, self.initialization_vector)
+        return Cipher(algorithms.AES(self.key), modes.CBC(self.initialization_vector), backend=default_backend())
 
     def decrypt(self, encrypted_text):
         cipher = self.__get_cipher()
-        decrypted_text = unpad(cipher.decrypt(b64decode(encrypted_text)), 16)
-        decrypted_text_padded = decrypted_text.rstrip(b"\0").decode("utf8")
-        return decrypted_text_padded
+        decryptor = cipher.decryptor()
+        decrypted_text = decryptor.update(b64decode(encrypted_text)) + decryptor.finalize()
+        unpadder = padding.PKCS7(128).unpadder()
+        decrypted_text = unpadder.update(decrypted_text) + unpadder.finalize()
+        decrypted_text = decrypted_text.rstrip(b"\0").decode("utf8")
+        return decrypted_text
 
     def encrypt(self, text):
         cipher = self.__get_cipher()
-        encrypted = cipher.encrypt(pad(text.encode("utf8"), AES.block_size))
+        padder = padding.PKCS7(128).padder()
+        padded_data = padder.update(text.encode("utf8")) + padder.finalize()
+        encryptor = cipher.encryptor()
+        encrypted = encryptor.update(padded_data) + encryptor.finalize()
         return b64encode(encrypted).decode("utf8")
