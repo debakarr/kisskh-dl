@@ -47,7 +47,7 @@ class Downloader:
         for subtitle in subtitles:
             logger.info(f"Downloading {subtitle.label} sub...")
             extension = os.path.splitext(urlparse(subtitle.src).path)[-1]
-            response = requests.get(subtitle.src)
+            response = requests.get(subtitle.src, timeout=60)
             output_path = Path(f"{filepath}.{subtitle.land}{extension}")
             output_path.write_bytes(response.content)
             if decrypter is not None:
