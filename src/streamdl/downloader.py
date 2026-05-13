@@ -190,20 +190,24 @@ class Downloader:
             if written < len(segments):
                 logger.warning("Download incomplete: %d/%d segments", written, len(segments))
 
-        # Remux to MP4
+        # Remux .ts → .mp4 (fast copy, no re-encode)
         output_mp4 = f"{filepath}.mp4"
         logger.info("Remuxing to MP4: %s", output_mp4)
         try:
-            subprocess.run(  # noqa: S603,S607
+            result = subprocess.run(  # noqa: S603,S607
                 ["ffmpeg", "-i", temp_ts, "-c", "copy", "-y", output_mp4],
                 capture_output=True,
                 text=True,
                 timeout=120,
             )
-            os.unlink(temp_ts)
-            logger.info("Download complete: %s", output_mp4)
-        except Exception:
-            logger.info("Remux skipped, file at: %s", temp_ts)
+            if result.returncode == 0 and os.path.exists(output_mp4) and os.path.getsize(output_mp4) > 0:
+                os.unlink(temp_ts)
+                logger.info("Download complete: %s (%.0f MB)", output_mp4, os.path.getsize(output_mp4) / 1e6)
+            else:
+                logger.warning("Remux failed (ffmpeg exit %d), keeping .ts at: %s", result.returncode, temp_ts)
+                logger.debug("ffmpeg stderr: %s", result.stderr[-300:])
+        except Exception as e:
+            logger.warning("Remux error: %s, keeping .ts at: %s", e, temp_ts)
 
     def download_subtitles(
         self, subtitles: list[SubItem], filepath: str, decrypter: SubtitleDecrypter | None = None
