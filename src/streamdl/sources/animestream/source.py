@@ -65,13 +65,31 @@ class AnimeStreamSource:
         locale = kwargs.get("locale", "ja-JP")
         sub_locale = kwargs.get("subtitle_locale", "en-US")
         api = AnimeStreamAPI()
-        return api.get_stream_url(content_id, locale=locale, subtitle_locale=sub_locale)
+
+        # Try episode first, if fails try getting first episode from series
+        try:
+            return api.get_stream_url(content_id, locale=locale, subtitle_locale=sub_locale)
+        except Exception:
+            pass
+        try:
+            series = api.series(content_id)
+            seasons = series.get("seasons", [])
+            if not seasons:
+                return None
+            eps = api.season_episodes(seasons[0]["content_id"])
+            if eps:
+                return api.get_stream_url(eps[0]["content_id"], locale=locale, subtitle_locale=sub_locale)
+        except Exception:
+            pass
+        return None
 
     @staticmethod
     def get_content_info(url: str) -> dict:
         content_id = _extract_id(url)
-        if content_id:
-            api = AnimeStreamAPI()
+        if not content_id:
+            return {"title": "", "episode": "0", "source": "animestream"}
+        api = AnimeStreamAPI()
+        try:
             info = api.content(content_id)
             return {
                 "title": info.get("series_title", info.get("title", "")),
@@ -79,4 +97,23 @@ class AnimeStreamSource:
                 "content_id": content_id,
                 "source": "animestream",
             }
+        except Exception:
+            pass
+        # Series-level URL — get first episode from first season
+        try:
+            series = api.series(content_id)
+            seasons = series.get("seasons", [])
+            if not seasons:
+                return {"title": series.get("title", ""), "episode": "1", "source": "animestream"}
+            eps = api.season_episodes(seasons[0]["content_id"])
+            if eps:
+                first = eps[0]
+                return {
+                    "title": series.get("title", ""),
+                    "episode": str(first.get("episode_number", first.get("episode", 1))),
+                    "content_id": first["content_id"],
+                    "source": "animestream",
+                }
+        except Exception:
+            pass
         return {"title": "", "episode": "0", "source": "animestream"}

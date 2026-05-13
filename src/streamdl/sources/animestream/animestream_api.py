@@ -45,6 +45,11 @@ class AnimeStreamAPI:
         """Get series details with seasons."""
         return self._get(f"series/{series_id}")
 
+    def season_episodes(self, season_id: str) -> list:
+        """Get all episodes for a season."""
+        data = self._get(f"season/{season_id}/episodes")
+        return data if isinstance(data, list) else []
+
     def content(self, content_id: str) -> dict:
         """Get content/episode details."""
         return self._get(f"content/{content_id}")
