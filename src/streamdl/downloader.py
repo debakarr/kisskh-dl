@@ -5,6 +5,8 @@ import logging
 import os
 import re
 import tempfile
+import threading
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -15,6 +17,13 @@ from streamdl.helper.decrypt_subtitle import SubtitleDecrypter
 from streamdl.models.sub import SubItem
 
 logger = logging.getLogger(__name__)
+
+
+class _QuietHandler(SimpleHTTPRequestHandler):
+    """HTTP handler that doesn't log to stdout."""
+
+    def log_message(self, *args):
+        pass
 
 
 class Downloader:
@@ -31,7 +40,6 @@ class Downloader:
             ),
         }
 
-        # Try native yt-dlp first
         ydl_opts = {
             "format": f"bestvideo[height<={quality[:-1]}]+bestaudio/best[height<={quality[:-1]}]/best",
             "concurrent_fragment_downloads": 15,
@@ -41,77 +49,73 @@ class Downloader:
             "retries": 10,
         }
         logger.debug("Download options: %s", ydl_opts)
+
+        # Try native yt-dlp first
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download(video_stream_url)
             return
         except Exception as e:
-            if "key length" in str(e):
-                logger.info("Key format issue detected, preprocessing playlist...")
-            else:
+            if "key length" not in str(e):
                 raise
 
-        # Fix: download playlist, decode base64 key, rewrite with data URI key
+        # ── Fix base64-encoded AES keys by preprocessing playlists ──
+        logger.info("Fixing AES key format in HLS playlists...")
         session = requests.Session()
         session.headers.update(headers)
 
-        def fix_key(content: str, base_url: str) -> str:
-            """Replace base64-encoded AES keys in m3u8 with data URIs."""
+        temp_dir = tempfile.mkdtemp(prefix="streamdl_")
+
+        def process_m3u8(url: str) -> str:
+            """Download m3u8, fix keys, save to temp dir. Return local path."""
+            resp = session.get(url, timeout=15)
+            resp.raise_for_status()
+            content = resp.text
+
+            # Fix AES keys: download base64 key, decode, replace with data URI
             for m in re.finditer(r'#EXT-X-KEY:METHOD=AES-128,URI="([^"]+)"', content):
-                key_url = urljoin(base_url, m.group(1))
-                logger.debug("Fixing key: %s", key_url)
+                key_url = urljoin(url, m.group(1))
                 try:
                     kr = session.get(key_url, timeout=15)
                     raw = kr.content.strip()
                     decoded = base64.b64decode(raw)
+                    data_uri = f"data:text/plain;base64,{base64.b64encode(decoded).decode()}"
+                    content = content.replace(m.group(1), data_uri)
                 except Exception:
-                    decoded = raw[:16]
-                data_uri = f"data:text/plain;base64,{base64.b64encode(decoded).decode()}"
-                content = content.replace(m.group(1), data_uri)
-            return content
+                    pass
 
-        def resolve_url(base: str, url: str) -> str:
-            if url.startswith("http"):
-                return url
-            return urljoin(base, url)
-
-        def fix_all_playlists(master_url: str) -> str:
-            """Recursively fix keys in master and variant playlists. Returns local path."""
-            resp = session.get(master_url, timeout=15)
-            resp.raise_for_status()
-            master = resp.text
-
-            # Find variant playlist URLs (line after #EXT-X-STREAM-INF or direct .m3u8)
-            lines = master.split("\n")
-            new_lines = []
-            for line in lines:
+            # Recursively process variant playlists (lines ending in .m3u8)
+            lines = content.split("\n")
+            for i, line in enumerate(lines):
                 stripped = line.strip()
                 if stripped.endswith(".m3u8") and not stripped.startswith("#"):
-                    var_url = resolve_url(master_url, stripped)
-                    var_resp = session.get(var_url, timeout=15)
-                    var_fixed = fix_key(var_resp.text, var_url)
-                    # Save variant to temp
-                    var_name = f"v_{abs(hash(var_url))}.m3u8"
-                    var_path = os.path.join(temp_dir, var_name)
-                    with open(var_path, "w") as f:
-                        f.write(var_fixed)
-                    new_lines.append("file:///" + var_path.replace("\\", "/"))
-                else:
-                    new_lines.append(line)
-            master = "\n".join(new_lines)
-            master = fix_key(master, master_url)
-            master_path = os.path.join(temp_dir, "master.m3u8")
-            with open(master_path, "w") as f:
-                f.write(master)
-            return master_path
+                    var_path = process_m3u8(urljoin(url, stripped))
+                    lines[i] = var_path
 
-        temp_dir = tempfile.mkdtemp(prefix="streamdl_")
+            # Save to temp dir
+            name = f"pl_{abs(hash(url))}.m3u8"
+            local_path = os.path.join(temp_dir, name)
+            with open(local_path, "w") as f:
+                f.write("\n".join(lines))
+            return local_path
+
+        # Fix all playlists
+        fixed_master = process_m3u8(video_stream_url)
+
+        # Start a local HTTP server to serve fixed playlists to yt-dlp
+        server = HTTPServer(("127.0.0.1", 0), _QuietHandler)
+        port = server.server_address[1]
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+
         try:
-            fixed_path = fix_all_playlists(video_stream_url)
-            logger.info("Retrying with fixed playlist...")
+            os.chdir(temp_dir)
+            local_url = f"http://127.0.0.1:{port}/{os.path.basename(fixed_master)}"
+            logger.info("Serving fixed playlist at %s", local_url)
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download("file:///" + fixed_path.replace("\\", "/"))
+                ydl.download(local_url)
         finally:
+            server.shutdown()
             import shutil
 
             shutil.rmtree(temp_dir, ignore_errors=True)
