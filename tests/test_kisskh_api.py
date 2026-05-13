@@ -74,14 +74,15 @@ def test_get_subtitles(kisskh_api):
     ]
     kisskh_api._request = MagicMock(return_value=mock_response)
 
-    result = kisskh_api.get_subtitles(18609, "", "en", "id")
+    test_kkey = "test_kkey_value_for_testing"
+    result = kisskh_api.get_subtitles(18609, test_kkey, "en", "id")
     assert result == [
         SubItem(src="https://example.srt", label="English", land="en", default=False),
         SubItem(src="https://example2.srt", label="Indonesia", land="id", default=False),
     ]
     kisskh_api._request.assert_called_once()
 
-    assert kisskh_api.get_subtitles(18609, "", "all") == [
+    assert kisskh_api.get_subtitles(18609, test_kkey, "all") == [
         SubItem(src="https://example.srt", label="English", land="en", default=False),
         SubItem(src="https://example2.srt", label="Indonesia", land="id", default=False),
         SubItem(src="https://example3.srt", label="Arabic", land="ar", default=False),
@@ -151,6 +152,7 @@ def test_get_stream_url(kisskh_api):
     }
     kisskh_api._request = MagicMock(return_value=mock_response)
 
-    result = kisskh_api.get_stream_url(13915)
+    test_kkey = "test_kkey_for_stream"
+    result = kisskh_api.get_stream_url(13915, test_kkey)
     assert result == "https://hls03.example.com/stream.m3u8"
     kisskh_api._request.assert_called_once()
