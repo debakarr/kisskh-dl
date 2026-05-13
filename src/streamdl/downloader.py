@@ -37,6 +37,8 @@ class Downloader:
             },
             "verbose": logger.getEffectiveLevel() == logging.DEBUG,
             "retries": 10,
+            "hls_prefer_native": False,
+            "hls_use_mpegts": True,
         }
         logger.debug(f"Calling download with following options: {ydl_opts}")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
