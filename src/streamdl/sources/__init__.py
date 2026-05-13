@@ -27,6 +27,13 @@ class StreamSource(Protocol):
     def get_content_info(url: str) -> dict[str, Any]: ...
 
 
+class SeriesSource(Protocol):
+    """Optional: sources that support downloading entire series."""
+
+    @staticmethod
+    def download_series(url: str, output_dir: str, quality: str = "1080p", **kwargs: Any) -> None: ...
+
+
 # ── Registry ─────────────────────────────────────────────────────────────
 
 
@@ -34,7 +41,7 @@ _registry: dict[str, type[StreamSource]] = {}
 _registered = False
 
 
-def register(source_cls: type[StreamSource]) -> type[StreamSource]:
+def register(source_cls: type[Any]) -> type[Any]:
     """Register a source module (decorator)."""
     for domain in source_cls.domains:
         _registry[domain] = source_cls

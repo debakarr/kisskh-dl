@@ -62,21 +62,27 @@ def _dispatch_dl(url_or_query: str, output_dir: Path, quality: str, **kwargs) ->
             return
 
         logger.info("Detected source: %s", source_cls.name)
-        info = source_cls.get_content_info(url_or_query)
-        stream_url = source_cls.get_stream_url(url_or_query, **kwargs)
 
-        if not stream_url:
-            logger.error("Could not get stream URL.")
-            return
+        # Check if source supports series download
+        if hasattr(source_cls, "download_series") and source_cls.download_series is not None:
+            output_path = str(Path(str(output_dir)))
+            source_cls.download_series(url_or_query, output_path, quality, **kwargs)
+        else:
+            info = source_cls.get_content_info(url_or_query)
+            stream_url = source_cls.get_stream_url(url_or_query, **kwargs)
 
-        title = info.get("title", "video").replace(" ", "_")
-        ep = info.get("episode", "")
-        filename = f"{title}_E{ep}" if ep else title
-        filepath = str(Path(str(output_dir)) / filename)
+            if not stream_url:
+                logger.error("Could not get stream URL.")
+                return
 
-        downloader = Downloader(referer=url_or_query)
-        downloader.download_video_from_stream_url(stream_url, filepath, quality)
-        logger.info("Downloaded: %s", filepath)
+            title = info.get("title", "video").replace(" ", "_")
+            ep = info.get("episode", "")
+            filename = f"{title}_E{ep}" if ep else title
+            filepath = str(Path(str(output_dir)) / filename)
+
+            downloader = Downloader(referer=url_or_query)
+            downloader.download_video_from_stream_url(stream_url, filepath, quality)
+            logger.info("Downloaded: %s", filepath)
 
     else:
         # ── Search mode: first try direct content_id (AnimeStream) ──

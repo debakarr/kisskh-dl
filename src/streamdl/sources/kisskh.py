@@ -7,6 +7,7 @@ import os
 import re
 from urllib.parse import parse_qs, urlparse
 
+from streamdl.downloader import Downloader
 from streamdl.kisskh_api import KissKHApi
 from streamdl.sources import register
 
@@ -66,6 +67,44 @@ class KisskhSource:
 
         kkeys = api.generate_kkeys(drama_id, episode_id, episode_number, drama_name)
         return api.get_stream_url(episode_id, kkeys.get("stream", ""))
+
+    @staticmethod
+    def download_series(url: str, output_dir: str, quality: str = "1080p", **kwargs) -> None:
+        """Download all episodes of a kisskh series."""
+        logger.info("Downloading all episodes from: %s", url)
+        parsed = urlparse(url)
+        params = parse_qs(parsed.query)
+        drama_id = int(params.get("id", [0])[0])
+        drama_name = parsed.path.split("/")[2].replace("-", "_") if len(parsed.path.split("/")) > 2 else "Drama"
+        first = kwargs.get("first", 1)
+        last = kwargs.get("last", 9999)
+
+        api = KissKHApi(base_url=os.getenv("KISSKH_BASE_URL", "https://kisskh.nl"))
+        downloader = Downloader(referer=api.site_domain)
+        episode_ids = api.get_episode_ids(drama_id, start=first, stop=last)
+
+        for ep_num, cur_ep_id in episode_ids.items():
+            logger.info("Episode %s...", ep_num)
+            try:
+                kkeys = api.generate_kkeys(drama_id, cur_ep_id, ep_num, drama_name)
+            except Exception as e:
+                logger.error("Failed auth for Episode %s: %s", ep_num, e)
+                continue
+            video_url = api.get_stream_url(cur_ep_id, kkeys.get("stream", ""))
+            if "tickcounter" in video_url:
+                logger.warning("Episode %s not released yet!", ep_num)
+                continue
+            subtitle_kkey = kkeys.get("sub", "")
+            if subtitle_kkey:
+                subtitles = api.get_subtitles(cur_ep_id, subtitle_kkey, "en")
+                filepath = f"{output_dir}/{drama_name}/{drama_name}_E{ep_num:02d}"
+                downloader.download_video_from_stream_url(video_url, filepath, quality)
+                downloader.download_subtitles(subtitles, filepath, None)
+            else:
+                filepath = f"{output_dir}/{drama_name}/{drama_name}_E{ep_num:02d}"
+                downloader.download_video_from_stream_url(video_url, filepath, quality)
+        api.cleanup()
+        logger.info("Series download complete: %s (%d episodes)", drama_name, len(episode_ids))
 
     @staticmethod
     def get_content_info(url: str) -> dict:
