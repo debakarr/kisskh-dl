@@ -6,18 +6,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.8"
-      - name: Run image
-        uses: abatilo/actions-poetry@v2.0.0
-        with:
-          poetry-version: "1.7.1"
+          python-version: "3.13"
+          enable-cache: true
       - name: Bump version
-        run: poetry version ${{github.ref_name}}
-      - name: Set credential
-        run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-      - name: Build and publish to pypi
-        run: poetry publish --build
+        run: uv version ${{github.ref_name}}
+      - name: Build
+        run: uv build
+      - name: Publish to PyPI
+        run: uv publish --token ${{ secrets.PYPI_TOKEN }}
