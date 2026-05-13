@@ -14,6 +14,9 @@ dependencies = [
     "pysrt>=1.1.2",
     "python-dotenv>=1.2.2",
     "cryptography>=48.0.0",
+    "cloudscraper>=1.2.71",
+    "wasmtime>=44.0.0",
+    "undetected-chromedriver>=3.5.5",
 ]
 
 [project.scripts]
