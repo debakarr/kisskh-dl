@@ -1,6 +1,6 @@
 [project]
 name = "kisskh-downloader"
-version = "0.2.0"
+version = "0.2.1"
 description = "Simple downloaded for https://kisskh.co/"
 readme = "README.md"
 authors = [{ name = "Debakar Roy", email = "allinonedibakar@gmail.com" }]
