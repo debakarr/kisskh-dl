@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class KissKHApi:
-    def __init__(self):
-        self.base_url = "https://kisskh.co/api/"
-        self.session = None
+    def __init__(self, base_url: str = "https://kisskh.nl"):
+        self.site_domain = base_url.rstrip("/")
+        self.base_url = f"{self.site_domain}/api/"
+        self.session: Optional[requests.Session] = None
 
     def _drama_api_url(self, drama_id: int) -> str:
         """API endpoint for drama details
@@ -24,7 +25,7 @@ class KissKHApi:
         :param drama_id: drama id
         :return: api url for a specific drama
         """
-        return urljoin(self.base_url, f"DramaList/Drama/{drama_id}")
+        return urljoin(self.base_url, f"DramaList/Drama/{drama_id}?isq=false")
 
     def _search_api_url(self, query: str) -> str:
         """API endpoint for drama search details
@@ -34,39 +35,54 @@ class KissKHApi:
         """
         return urljoin(self.base_url, f"DramaList/Search?q={query}")
 
-    def _subtitle_api_url(self, episode_id: int) -> str:
+    def _subtitle_api_url(self, episode_id: int, kkey: str = "") -> str:
         """API endpoint for subtitles
 
         :param episode_id: episode id
+        :param kkey: authentication key
         :return: api url for subtitles for a specific episode
         """
-        return urljoin(self.base_url, f"Sub/{episode_id}")
+        return urljoin(self.base_url, f"Sub/{episode_id}?kkey={kkey}")
 
-    def _stream_api_url(self, episode_id: int) -> str:
+    def _stream_api_url(self, episode_id: int, kkey: str = "") -> str:
         """API endpoint for stream url
 
         :param episode_id: episode id
+        :param kkey: authentication key
         :return: api url for getting stream video details
         """
-        return urljoin(self.base_url, f"DramaList/Episode/{episode_id}.png?err=false&ts=&time=")
+        return urljoin(
+            self.base_url,
+            f"DramaList/Episode/{episode_id}.png?err=false&ts=null&time=null&kkey={kkey}",
+        )
 
     def _get_session(self) -> requests.Session:
         if self.session is None:
             self.session = requests.Session()
         return self.session
 
-    def _request(self, url: str) -> requests.models.Response:
+    def _request(self, url: str, referer: str = "") -> requests.models.Response:
         """Helper for all the request call
 
         :param url: url to do the get request on
+        :param referer: Referer header value
         :return: reponse for a specific get request
         """
-        logger.debug(f"Making GET {url}")
+        logger.debug("Making GET %s", url)
         session = self._get_session()
-        response = session.get(url)
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/147.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json, text/plain, */*",
+            "Referer": referer or f"{self.site_domain}/",
+        }
+        response = session.get(url, headers=headers)
         response.raise_for_status()
         response_json = response.json()
-        logger.debug(f"Response: {json.dumps(response_json, indent=4)}")
+        logger.debug("Response: %s", json.dumps(response_json, indent=4))
         return response
 
     def get_episode_ids(self, drama_id: int, start: int = 1, stop: int = sys.maxsize) -> Dict[int, int]:
@@ -79,20 +95,21 @@ class KissKHApi:
         """
         drama_api_url = self._drama_api_url(drama_id=drama_id)
         response = self._request(drama_api_url)
-        drama = Drama.parse_obj(response.json())
+        drama = Drama.model_validate(response.json())
         return drama.get_episodes_ids(start=start, stop=stop)
 
-    def get_subtitles(self, episode_id: int, *language_filter: str) -> List[SubItem]:
+    def get_subtitles(self, episode_id: int, kkey: str = "", *language_filter: str) -> List[SubItem]:
         """Get subtitle details for a specific episode
 
         :param episode_id: episode id
+        :param kkey: authentication key
         :param language_filter: multiple language filters like 'en', 'id', 'ar' etc.
         :return: subtitles based on language_filter.
         If 'all' is present in language filter, then all subtitles are returned
         """
-        subtitle_api_url = self._subtitle_api_url(episode_id=episode_id)
-        response = self._request(subtitle_api_url)
-        subtitles: Sub = Sub.parse_obj(response.json())
+        subtitle_api_url = self._subtitle_api_url(episode_id=episode_id, kkey=kkey)
+        response = self._request(subtitle_api_url, referer=self._build_episode_referer(episode_id))
+        subtitles: Sub = Sub.model_validate(response.json())
         filtered_subtitles: List[SubItem] = []
         if "all" in language_filter:
             filtered_subtitles.extend(subtitle for subtitle in subtitles)
@@ -108,16 +125,17 @@ class KissKHApi:
         """
         search_api_url = self._search_api_url(query)
         response = self._request(search_api_url)
-        return Search.parse_obj(response.json())
+        return Search.model_validate(response.json())
 
-    def get_stream_url(self, episode_id: int) -> str:
+    def get_stream_url(self, episode_id: int, kkey: str = "") -> str:
         """Stream video url for specific episode
 
         :param episode_id: episode id
+        :param kkey: authentication key
         :return: m3u8 stream url for that episode
         """
-        stream_api_url = self._stream_api_url(episode_id)
-        response = self._request(stream_api_url)
+        stream_api_url = self._stream_api_url(episode_id=episode_id, kkey=kkey)
+        response = self._request(stream_api_url, referer=self._build_episode_referer(episode_id))
         return response.json().get("Video")
 
     def get_drama_by_query(self, query: str) -> Optional[DramaInfo]:
@@ -139,3 +157,7 @@ class KissKHApi:
             user_selection = int(input("Select a drama from above: "))
 
         return dramas[user_selection - 1]
+
+    def _build_episode_referer(self, episode_id: int) -> str:
+        """Build the episode page URL to use as Referer header."""
+        return f"{self.site_domain}/Drama/Drama/Episode-0?id=0&ep={episode_id}&page=0&pageSize=100"

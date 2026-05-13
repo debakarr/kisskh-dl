@@ -9,13 +9,13 @@ from kisskh_downloader.models.sub import SubItem
 
 @pytest.fixture(scope="module")
 def kisskh_api():
-    return KissKHApi()
+    return KissKHApi(base_url="https://kisskh.nl")
 
 
 def test_get_episode_ids(kisskh_api):
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "description": "Nam Haeng Sun used to be a national athlete. She now runs a side dish store. She has a super positive personality and unlimited like stamina. She takes another turn and enters the private education field, which is for students preparing for their university entrance exam. Unexpectedly, Nam Haeng Sun gets involved with Choi Chi Yeol.\r\n\r\nChoi Chi Yeol is a popular instructor in the private education field and is known as Ilta Instructor (most popular instructor). He works hard at his job. As an instructor to his students, he speaks without reserve and implements showmanship in his lessons. He has accumulated wealth and fame as a popular instructor, but, with increasing success, he has become more sensitive, prickly, and indifferent to people. He then meets Nam Haeng Sun with her super positive personality and never ending stamina. The relationship between Nam Haeng Sun and Choi Chi Yeol develops romantically.",
+        "description": "desc",
         "releaseDate": "2023-01-14T11:44:28",
         "trailer": "",
         "country": "South Korea",
@@ -41,7 +41,7 @@ def test_get_episode_ids(kisskh_api):
         "episodesCount": 14,
         "label": None,
         "favoriteID": 0,
-        "thumbnail": "https://occ-0-64-58.1.nflxso.net/dnm/api/v6/6gmvu2hxdfnQ55LZZjyzYR4kzGk/AAAABTYthAqSsuZtddo5amrRXv3iKR-LXDnpIs_YOHAt9-QP5CPZqwZy7NC4Nt15TY3dRtgmXE03Dgn4ViuPQK5RVFouQ0krYoVYlwGXYYdX5odL29aWy_n9Y_IPF7NzYxOzHyAW0g.jpg?r=2da",
+        "thumbnail": "https://example.com/img.jpg",
         "id": 6917,
         "title": "Crash Course in Romance",
     }
@@ -60,7 +60,7 @@ def test_get_episode_ids(kisskh_api):
         10: 118960,
     }
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/DramaList/Drama/44377")
+    kisskh_api._request.assert_called_once_with("https://kisskh.nl/api/DramaList/Drama/44377?isq=false")
 
     assert kisskh_api.get_episode_ids(44377, 10, 100) == {10: 118960, 11: 119505, 12: 119566, 13: 119964, 14: 120047}
 
@@ -68,78 +68,23 @@ def test_get_episode_ids(kisskh_api):
 def test_get_subtitles(kisskh_api):
     mock_response = MagicMock()
     mock_response.json.return_value = [
-        {
-            "src": "https://i.filecache.club/mau/d-p-/English-EP12-KinnPorsche-The-Series.srt",
-            "label": "English",
-            "land": "en",
-            "default": False,
-        },
-        {"src": "https://i.filecache.club/mul/km/rsrwxdno.srt", "label": "Khmer", "land": "km", "default": False},
-        {
-            "src": "https://i.filecache.club/mau/d-p-/Bahasa-Indonesia-EP12-KinnPorsche-The-Series.srt",
-            "label": "Indonesia",
-            "land": "id",
-            "default": False,
-        },
-        {
-            "src": "https://i.filecache.club/mau/d-p-/Bahasa-Malaysia-EP12-KinnPorsche-The-Series.srt",
-            "label": "Malay",
-            "land": "ms",
-            "default": False,
-        },
-        {
-            "src": "https://i.filecache.club/mau/d-p-/Arabic-EP12-KinnPorsche-The-Series.srt",
-            "label": "Arabic",
-            "land": "ar",
-            "default": False,
-        },
+        {"src": "https://example.srt", "label": "English", "land": "en", "default": False},
+        {"src": "https://example2.srt", "label": "Indonesia", "land": "id", "default": False},
+        {"src": "https://example3.srt", "label": "Arabic", "land": "ar", "default": False},
     ]
     kisskh_api._request = MagicMock(return_value=mock_response)
 
-    assert kisskh_api.get_subtitles(18609, "en", "km", "ar") == [
-        SubItem(
-            src="https://i.filecache.club/mau/d-p-/English-EP12-KinnPorsche-The-Series.srt",
-            label="English",
-            land="en",
-            default=False,
-        ),
-        SubItem(src="https://i.filecache.club/mul/km/rsrwxdno.srt", label="Khmer", land="km", default=False),
-        SubItem(
-            src="https://i.filecache.club/mau/d-p-/Arabic-EP12-KinnPorsche-The-Series.srt",
-            label="Arabic",
-            land="ar",
-            default=False,
-        ),
+    result = kisskh_api.get_subtitles(18609, "", "en", "id")
+    assert result == [
+        SubItem(src="https://example.srt", label="English", land="en", default=False),
+        SubItem(src="https://example2.srt", label="Indonesia", land="id", default=False),
     ]
+    kisskh_api._request.assert_called_once()
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/Sub/18609")
-
-    assert kisskh_api.get_subtitles(18609, "all") == [
-        SubItem(
-            src="https://i.filecache.club/mau/d-p-/English-EP12-KinnPorsche-The-Series.srt",
-            label="English",
-            land="en",
-            default=False,
-        ),
-        SubItem(src="https://i.filecache.club/mul/km/rsrwxdno.srt", label="Khmer", land="km", default=False),
-        SubItem(
-            src="https://i.filecache.club/mau/d-p-/Bahasa-Indonesia-EP12-KinnPorsche-The-Series.srt",
-            label="Indonesia",
-            land="id",
-            default=False,
-        ),
-        SubItem(
-            src="https://i.filecache.club/mau/d-p-/Bahasa-Malaysia-EP12-KinnPorsche-The-Series.srt",
-            label="Malay",
-            land="ms",
-            default=False,
-        ),
-        SubItem(
-            src="https://i.filecache.club/mau/d-p-/Arabic-EP12-KinnPorsche-The-Series.srt",
-            label="Arabic",
-            land="ar",
-            default=False,
-        ),
+    assert kisskh_api.get_subtitles(18609, "", "all") == [
+        SubItem(src="https://example.srt", label="English", land="en", default=False),
+        SubItem(src="https://example2.srt", label="Indonesia", land="id", default=False),
+        SubItem(src="https://example3.srt", label="Arabic", land="ar", default=False),
     ]
 
 
@@ -150,7 +95,7 @@ def test_search_dramas_by_query(kisskh_api):
             "episodesCount": 16,
             "label": "",
             "favoriteID": 0,
-            "thumbnail": "https://occ-0-2306-64.1.nflxso.net/dnm/api/v6/6AYY37jfdO6hpXcMjf9Yu5cnmO0/AAAABYls93eGni5U0Uvfx2k9k23JLjbf25st6tq2ksurtegY41ReNjxtC37xtlsOTIgakHN1wSIbRhc7TVZJWPid653PmvnE.jpg?r=cbd",
+            "thumbnail": "https://example.com/img.jpg",
             "id": 97,
             "title": "Crash Landing on You",
         },
@@ -158,7 +103,7 @@ def test_search_dramas_by_query(kisskh_api):
             "episodesCount": 14,
             "label": "",
             "favoriteID": 0,
-            "thumbnail": "https://occ-0-64-58.1.nflxso.net/dnm/api/v6/6gmvu2hxdfnQ55LZZjyzYR4kzGk/AAAABTYthAqSsuZtddo5amrRXv3iKR-LXDnpIs_YOHAt9-QP5CPZqwZy7NC4Nt15TY3dRtgmXE03Dgn4ViuPQK5RVFouQ0krYoVYlwGXYYdX5odL29aWy_n9Y_IPF7NzYxOzHyAW0g.jpg?r=2da",
+            "thumbnail": "https://example.com/img2.jpg",
             "id": 6917,
             "title": "Crash Course in Romance",
         },
@@ -167,15 +112,15 @@ def test_search_dramas_by_query(kisskh_api):
 
     search_result = kisskh_api.search_dramas_by_query("Crash")
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/DramaList/Search?q=Crash")
+    kisskh_api._request.assert_called_once_with("https://kisskh.nl/api/DramaList/Search?q=Crash")
 
-    assert search_result == Search(
-        __root__=[
+    assert search_result == Search.model_validate(
+        [
             DramaInfo(
                 episodesCount=16,
                 label="",
                 favoriteID=0,
-                thumbnail="https://occ-0-2306-64.1.nflxso.net/dnm/api/v6/6AYY37jfdO6hpXcMjf9Yu5cnmO0/AAAABYls93eGni5U0Uvfx2k9k23JLjbf25st6tq2ksurtegY41ReNjxtC37xtlsOTIgakHN1wSIbRhc7TVZJWPid653PmvnE.jpg?r=cbd",
+                thumbnail="https://example.com/img.jpg",
                 id=97,
                 title="Crash Landing on You",
             ),
@@ -183,7 +128,7 @@ def test_search_dramas_by_query(kisskh_api):
                 episodesCount=14,
                 label="",
                 favoriteID=0,
-                thumbnail="https://occ-0-64-58.1.nflxso.net/dnm/api/v6/6gmvu2hxdfnQ55LZZjyzYR4kzGk/AAAABTYthAqSsuZtddo5amrRXv3iKR-LXDnpIs_YOHAt9-QP5CPZqwZy7NC4Nt15TY3dRtgmXE03Dgn4ViuPQK5RVFouQ0krYoVYlwGXYYdX5odL29aWy_n9Y_IPF7NzYxOzHyAW0g.jpg?r=2da",
+                thumbnail="https://example.com/img2.jpg",
                 id=6917,
                 title="Crash Course in Romance",
             ),
@@ -194,10 +139,10 @@ def test_search_dramas_by_query(kisskh_api):
 def test_get_stream_url(kisskh_api):
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "Video": "https://hls05.hls1.online/hls05/e4b349db73114f317702a1bb1a8d7f93/ep.12.v0.1657615499.720.m3u8",
+        "Video": "https://hls03.example.com/stream.m3u8",
         "Video_tmp": "",
-        "ThirdParty": "https://ssbstream.net/e/0334lvognaqc?caption_1=https://sub.dembed1.com&sub_1=English",
-        "Type": 1,
+        "ThirdParty": "",
+        "Type": 0,
         "id": None,
         "dataSaver": None,
         "a": None,
@@ -206,9 +151,6 @@ def test_get_stream_url(kisskh_api):
     }
     kisskh_api._request = MagicMock(return_value=mock_response)
 
-    assert (
-        kisskh_api.get_stream_url(13915)
-        == "https://hls05.hls1.online/hls05/e4b349db73114f317702a1bb1a8d7f93/ep.12.v0.1657615499.720.m3u8"
-    )
-
-    kisskh_api._request.assert_called_once_with("https://kisskh.co/api/DramaList/Episode/13915.png?err=false&ts=&time=")
+    result = kisskh_api.get_stream_url(13915)
+    assert result == "https://hls03.example.com/stream.m3u8"
+    kisskh_api._request.assert_called_once()

@@ -91,8 +91,8 @@ def dl(
 
     decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector) if decrypt_subtitle else None
 
-    kisskh_api = KissKHApi()
-    downloader = Downloader(referer="https://kisskh.co")
+    kisskh_api = KissKHApi(base_url="https://kisskh.nl")
+    downloader = Downloader(referer="https://kisskh.nl")
     episode_ids: Dict[int, int] = {}
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
