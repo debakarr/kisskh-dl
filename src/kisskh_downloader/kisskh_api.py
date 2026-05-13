@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import sys
-from typing import Dict, List, Optional
 from urllib.parse import urljoin
 
 import requests
@@ -32,7 +31,7 @@ class KissKHApi:
             resolved = os.getenv("KISSKH_BASE_URL", "https://kisskh.nl").rstrip("/")
         self.base_url = f"{resolved}/api/"
         self.site_domain = resolved
-        self.session: Optional[requests.Session] = None
+        self.session: requests.Session | None = None
         self._kkey_provider = None
 
     @property
@@ -82,19 +81,19 @@ class KissKHApi:
         logger.debug("Response: %s", json.dumps(response_json, indent=4))
         return response
 
-    def get_episode_ids(self, drama_id: int, start: int = 1, stop: int = sys.maxsize) -> Dict[int, int]:
+    def get_episode_ids(self, drama_id: int, start: int = 1, stop: int = sys.maxsize) -> dict[int, int]:
         """Get episode ids for a specific drama."""
         drama_api_url = self._drama_api_url(drama_id=drama_id)
         response = self._request(drama_api_url)
         drama = Drama.model_validate(response.json())
         return drama.get_episodes_ids(start=start, stop=stop)
 
-    def get_subtitles(self, episode_id: int, kkey: str, *language_filter: str) -> List[SubItem]:
+    def get_subtitles(self, episode_id: int, kkey: str, *language_filter: str) -> list[SubItem]:
         """Get subtitle details for a specific episode."""
         subtitle_api_url = self._subtitle_api_url(episode_id=episode_id, kkey=kkey)
         response = self._request(subtitle_api_url, referer=self._build_episode_referer(episode_id))
         subtitles: Sub = Sub.model_validate(response.json())
-        filtered_subtitles: List[SubItem] = []
+        filtered_subtitles: list[SubItem] = []
         if "all" in language_filter:
             filtered_subtitles.extend(subtitle for subtitle in subtitles)
         elif language_filter:
@@ -113,7 +112,7 @@ class KissKHApi:
         response = self._request(stream_api_url, referer=self._build_episode_referer(episode_id))
         return response.json().get("Video")
 
-    def get_drama_by_query(self, query: str) -> Optional[DramaInfo]:
+    def get_drama_by_query(self, query: str) -> DramaInfo | None:
         """Select specific drama from a search query."""
         dramas = self.search_dramas_by_query(query=query)
         if len(dramas) == 0:
@@ -148,7 +147,7 @@ class KissKHApi:
         episode_id: int,
         episode_number: int,
         drama_title: str,
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """Generate or retrieve kkey tokens for stream and subtitle endpoints.
 
         Checks environment variables first:
@@ -179,7 +178,7 @@ class KissKHApi:
         )
 
         # Merge with any partial env-var keys
-        result: Dict[str, str] = {}
+        result: dict[str, str] = {}
         if stream_key:
             result["stream"] = stream_key
         if sub_key:

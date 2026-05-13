@@ -6,7 +6,22 @@ from kisskh_downloader.models.drama import Drama
 @pytest.fixture
 def obj() -> Drama:
     reponse_data = {
-        "description": "Nam Haeng Sun used to be a national athlete. She now runs a side dish store. She has a super positive personality and unlimited like stamina. She takes another turn and enters the private education field, which is for students preparing for their university entrance exam. Unexpectedly, Nam Haeng Sun gets involved with Choi Chi Yeol.\r\n\r\nChoi Chi Yeol is a popular instructor in the private education field and is known as Ilta Instructor (most popular instructor). He works hard at his job. As an instructor to his students, he speaks without reserve and implements showmanship in his lessons. He has accumulated wealth and fame as a popular instructor, but, with increasing success, he has become more sensitive, prickly, and indifferent to people. He then meets Nam Haeng Sun with her super positive personality and never ending stamina. The relationship between Nam Haeng Sun and Choi Chi Yeol develops romantically.",
+        "description": (
+            "Nam Haeng Sun used to be a national athlete. She now runs a side dish store."
+            " She has a super positive personality and unlimited like stamina."
+            " She takes another turn and enters the private education field,"
+            " which is for students preparing for their university entrance exam."
+            " Unexpectedly, Nam Haeng Sun gets involved with Choi Chi Yeol.\r\n\r\n"
+            "Choi Chi Yeol is a popular instructor in the private education field"
+            " and is known as Ilta Instructor (most popular instructor)."
+            " He works hard at his job. As an instructor to his students,"
+            " he speaks without reserve and implements showmanship in his lessons."
+            " He has accumulated wealth and fame as a popular instructor,"
+            " but, with increasing success, he has become more sensitive,"
+            " prickly, and indifferent to people. He then meets Nam Haeng Sun"
+            " with her super positive personality and never ending stamina."
+            " The relationship between Nam Haeng Sun and Choi Chi Yeol develops romantically."
+        ),
         "releaseDate": "2023-01-14T11:44:28",
         "trailer": "",
         "country": "South Korea",

@@ -3,7 +3,6 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Union
 from urllib.parse import parse_qs, urlparse
 
 import click
@@ -98,8 +97,8 @@ def dl(
     first: int,
     last: int,
     quality: str,
-    sub_langs: List[str],
-    output_dir: Union[Path, str],
+    sub_langs: list[str],
+    output_dir: Path | str,
     decrypt_subtitle: bool,
     key: str,
     initialization_vector: str,
@@ -125,7 +124,7 @@ def dl(
     base_url = _resolve_base_url()
     kisskh_api = KissKHApi(base_url=base_url)
     downloader = Downloader(referer=base_url)
-    episode_ids: Dict[int, int] = {}
+    episode_ids: dict[int, int] = {}
 
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
@@ -258,8 +257,8 @@ def get_key(drama_url: str) -> None:
     click.echo("")
     click.echo("  To use these without a browser next time, set these env vars:")
     click.echo("")
-    click.echo(f'    set KISSKH_STREAM_KEY={kkeys.get("stream", "")}')
-    click.echo(f'    set KISSKH_SUB_KEY={kkeys.get("sub", "")}')
+    click.echo(f"    set KISSKH_STREAM_KEY={kkeys.get('stream', '')}")
+    click.echo(f"    set KISSKH_SUB_KEY={kkeys.get('sub', '')}")
     click.echo("")
     click.echo("  Then run your download command as usual:")
     click.echo(f'    kisskh dl "{drama_url}" -o .')

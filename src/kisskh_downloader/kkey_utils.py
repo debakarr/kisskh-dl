@@ -135,7 +135,7 @@ class KkeyProvider:
 
         if not captured_kkeys:
             raise RuntimeError(
-                f"Failed to capture kkey for episode {episode_id}. " "The site may have changed its API structure."
+                f"Failed to capture kkey for episode {episode_id}. The site may have changed its API structure."
             )
 
         return captured_kkeys
