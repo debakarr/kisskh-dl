@@ -17,12 +17,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --all-extras --dev
-      - name: Virtual environment info
-        run: uv venv --no-python
+        run: uv sync
       - name: Run flake8 (along with black, isort and bandit wrapper)
         run: uv run flake8 src tests
       - name: Run mypy
-        run: uv run mypy --install-types --non-interactive --ignore-missing-imports src
+        run: uv run mypy --ignore-missing-imports src
       - name: Run pytest
         run: uv run pytest
