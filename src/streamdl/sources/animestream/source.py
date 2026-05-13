@@ -23,20 +23,22 @@ class AnimeStreamSource:
     def search(query: str) -> list[dict]:
         api = AnimeStreamAPI()
         try:
-            results = api.search(query)
+            data = api.search(query)
         except Exception:
-            results = []
+            return []
         items: list[dict] = []
-        for r in results:
-            items.append(
-                {
-                    "title": r.get("title", "?"),
-                    "id": r.get("content_id", ""),
-                    "url": f"https://anime.uniquestream.net/watch/{r['content_id']}/{r.get('title', '?')}",
-                    "source": "animestream",
-                    "type": "anime",
-                }
-            )
+        # Response is {series: [...], movies: [...], episodes: [...]}
+        for key, media_type in [("series", "anime"), ("movies", "movie")]:
+            for r in data.get(key, []):
+                items.append(
+                    {
+                        "title": r.get("title", "?"),
+                        "id": r.get("content_id", ""),
+                        "url": f"https://anime.uniquestream.net/series/{r['content_id']}/{r.get('title', '?')}",
+                        "source": "animestream",
+                        "type": media_type,
+                    }
+                )
         return items
 
     @staticmethod

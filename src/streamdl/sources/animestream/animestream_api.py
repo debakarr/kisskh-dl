@@ -29,14 +29,12 @@ class AnimeStreamAPI:
         resp.raise_for_status()
         return resp.json()
 
-    def search(self, query: str, limit: int = 10) -> list[dict]:
-        """Search for anime by title."""
+    def search(self, query: str, limit: int = 10) -> dict:
+        """Search for anime by title. Returns {series, movies, episodes, totals}."""
         data = self._get("search", query=query, t="all", limit=limit)
-        if isinstance(data, list):
-            return data
         if isinstance(data, dict):
-            return cast("list[dict]", data.get("data", data.get("results", [])))
-        return []
+            return cast("dict", data)
+        return {"series": [], "movies": [], "episodes": [], "totals": {}}
 
     def popular(self, page: int = 1, limit: int = 20) -> list[dict]:
         """Get popular anime."""
