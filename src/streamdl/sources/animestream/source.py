@@ -14,6 +14,18 @@ logger = logging.getLogger(__name__)
 API_BASE = "https://anime.uniquestream.net/api/v1"
 
 
+def _extract_id(url: str) -> str | None:
+    """Extract content_id from animestream URL."""
+    parsed = urlparse(url)
+    parts = parsed.path.rstrip("/").split("/")
+    for keyword in ("watch", "series"):
+        if keyword in parts:
+            idx = parts.index(keyword)
+            if len(parts) > idx + 1:
+                return parts[idx + 1]
+    return None
+
+
 @register
 class AnimeStreamSource:
     name = "animestream"
@@ -45,16 +57,7 @@ class AnimeStreamSource:
 
     @staticmethod
     def get_stream_url(url: str, **kwargs) -> str | None:
-        # Extract content_id from URL: /watch/{content_id}/...
-        parsed = urlparse(url)
-        parts = parsed.path.rstrip("/").split("/")
-        if "watch" in parts:
-            idx = parts.index("watch")
-            content_id = parts[idx + 1] if len(parts) > idx + 1 else None
-        else:
-            # Try direct content_id
-            content_id = parts[-1] if len(parts) > 1 else None
-
+        content_id = _extract_id(url)
         if not content_id:
             logger.error("Could not extract content_id from URL: %s", url)
             return None
@@ -66,15 +69,7 @@ class AnimeStreamSource:
 
     @staticmethod
     def get_content_info(url: str) -> dict:
-        parsed = urlparse(url)
-        parts = parsed.path.rstrip("/").split("/")
-        content_id = None
-        if "watch" in parts:
-            idx = parts.index("watch")
-            content_id = parts[idx + 1] if len(parts) > idx + 1 else None
-        else:
-            content_id = parts[-1]
-
+        content_id = _extract_id(url)
         if content_id:
             api = AnimeStreamAPI()
             info = api.content(content_id)
