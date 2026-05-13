@@ -6,8 +6,8 @@ from urllib.parse import urlparse
 import requests
 import yt_dlp
 
-from kisskh_downloader.helper.decrypt_subtitle import SubtitleDecrypter
-from kisskh_downloader.models.sub import SubItem
+from streamdl.helper.decrypt_subtitle import SubtitleDecrypter
+from streamdl.models.sub import SubItem
 
 logger = logging.getLogger(__name__)
 

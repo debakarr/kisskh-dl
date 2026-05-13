@@ -1,4 +1,4 @@
-from kisskh_downloader.helper.aes_cipher import AESCipher
+from streamdl.helper.aes_cipher import AESCipher
 
 
 def test_decrypt():

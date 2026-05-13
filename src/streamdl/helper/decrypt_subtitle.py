@@ -1,6 +1,6 @@
 import pysrt
 
-from kisskh_downloader.helper.aes_cipher import AESCipher
+from streamdl.helper.aes_cipher import AESCipher
 
 
 class SubtitleDecrypter:
