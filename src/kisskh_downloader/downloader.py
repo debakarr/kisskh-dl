@@ -55,6 +55,7 @@ class Downloader:
             extension = os.path.splitext(urlparse(subtitle.src).path)[-1]
             response = requests.get(subtitle.src, timeout=60)
             output_path = Path(f"{filepath}.{subtitle.land}{extension}")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(response.content)
             if decrypter is not None:
                 decrypted_subtitle = decrypter.decrypt_subtitles(output_path)

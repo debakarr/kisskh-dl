@@ -104,6 +104,16 @@ You can also download a single episode by providing the episode URL:
 kisskh dl "https://kisskh.nl/Drama/A-Business-Proposal/Episode-3?id=4608&ep=86439&page=0&pageSize=100" -o .
 ```
 
+### 📖 Download subtitles only
+
+To download subtitles without the video:
+
+```console
+kisskh dl "https://kisskh.nl/Drama/Island-Season-2?id=7000" -s en -so -o .
+```
+
+The `-so` / `--subs-only` flag skips video download and saves only subtitle files.
+
 For more options, use the `--help` flag.
 
 ---
