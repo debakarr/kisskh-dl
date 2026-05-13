@@ -21,18 +21,23 @@ class KisskhSource:
     @staticmethod
     def search(query: str) -> list[dict]:
         api = KissKHApi(base_url=os.getenv("KISSKH_BASE_URL", "https://kisskh.nl"))
-        drama = api.get_drama_by_query(query)
-        if drama is None:
+        try:
+            results = api.search_dramas_by_query(query)
+        except Exception as e:
+            logger.debug("Kisskh search error: %s", e)
             return []
-        return [
-            {
-                "title": drama.title,
-                "id": str(drama.id),
-                "url": f"{api.site_domain}/Drama/{drama.title.replace(' ', '-')}?id={drama.id}",
-                "source": "kisskh",
-                "type": "drama",
-            }
-        ]
+        items = []
+        for drama in results:
+            items.append(
+                {
+                    "title": drama.title,
+                    "id": str(drama.id),
+                    "url": f"{api.site_domain}/Drama/{drama.title.replace(' ', '-')}?id={drama.id}",
+                    "source": "kisskh",
+                    "type": "drama",
+                }
+            )
+        return items
 
     @staticmethod
     def get_stream_url(url: str, **kwargs) -> str | None:

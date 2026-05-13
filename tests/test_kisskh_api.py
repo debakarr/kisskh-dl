@@ -113,7 +113,7 @@ def test_search_dramas_by_query(kisskh_api):
 
     search_result = kisskh_api.search_dramas_by_query("Crash")
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.nl/api/DramaList/Search?q=Crash")
+    kisskh_api._request.assert_called_once_with("https://kisskh.nl/api/DramaList/Search?q=Crash&type=0")
 
     assert search_result == Search.model_validate(
         [

@@ -13,7 +13,7 @@ from streamdl.downloader import Downloader
 from streamdl.enums.quality import Quality
 from streamdl.helper.decrypt_subtitle import SubtitleDecrypter
 from streamdl.kisskh_api import KissKHApi
-from streamdl.sources import detect_source, list_sources, search_all
+from streamdl.sources import detect_source, init_sources, list_sources, search_all
 
 load_dotenv()
 
@@ -129,6 +129,7 @@ def _dispatch_dl(url_or_query: str, output_dir: Path, quality: str, **kwargs) ->
 @click.group()
 @click.option("-v", "--verbose", count=True, help="Increase log level verbosity")
 def streamdl(verbose):
+    init_sources()
     logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
     if verbose == 1:
         logging.getLogger().setLevel(logging.INFO)

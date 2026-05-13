@@ -31,14 +31,28 @@ class StreamSource(Protocol):
 
 
 _registry: dict[str, type[StreamSource]] = {}
+_registered = False
 
 
 def register(source_cls: type[StreamSource]) -> type[StreamSource]:
-    """Register a source module."""
+    """Register a source module (decorator)."""
     for domain in source_cls.domains:
         _registry[domain] = source_cls
     logger.debug("Registered source: %s (%s)", source_cls.name, ", ".join(source_cls.domains))
     return source_cls
+
+
+def init_sources() -> None:
+    """Import all source modules to trigger registration."""
+    global _registered
+    if _registered:
+        return
+    _registered = True
+    # Late imports to avoid circular dependency
+    from streamdl.sources import kisskh as _ks  # noqa: F401
+    from streamdl.sources.animestream import source as _as  # noqa: F401
+
+    logger.debug("All sources initialized: %s", [s.name for s in list_sources()])
 
 
 def detect_source(url: str) -> type[StreamSource] | None:

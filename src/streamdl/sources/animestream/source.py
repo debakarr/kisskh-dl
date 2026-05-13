@@ -26,16 +26,18 @@ class AnimeStreamSource:
             results = api.search(query)
         except Exception:
             results = []
-        return [
-            {
-                "title": r.get("title", "?"),
-                "id": r.get("content_id", ""),
-                "url": f"https://anime.uniquestream.net/watch/{r['content_id']}/{r.get('title', '?')}",
-                "source": "animestream",
-                "type": "anime",
-            }
-            for r in results
-        ]
+        items: list[dict] = []
+        for r in results:
+            items.append(
+                {
+                    "title": r.get("title", "?"),
+                    "id": r.get("content_id", ""),
+                    "url": f"https://anime.uniquestream.net/watch/{r['content_id']}/{r.get('title', '?')}",
+                    "source": "animestream",
+                    "type": "anime",
+                }
+            )
+        return items
 
     @staticmethod
     def get_stream_url(url: str, **kwargs) -> str | None:

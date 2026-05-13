@@ -47,7 +47,7 @@ class KissKHApi:
         return urljoin(self.base_url, f"DramaList/Drama/{drama_id}?isq=false")
 
     def _search_api_url(self, query: str) -> str:
-        return urljoin(self.base_url, f"DramaList/Search?q={query}")
+        return urljoin(self.base_url, f"DramaList/Search?q={query}&type=0")
 
     def _subtitle_api_url(self, episode_id: int, kkey: str = "") -> str:
         return urljoin(self.base_url, f"Sub/{episode_id}?kkey={kkey}")

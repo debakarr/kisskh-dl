@@ -6,9 +6,10 @@ Clean, open REST API. No authentication required.
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 from urllib.parse import urljoin
 
-import requests
+import cloudscraper
 
 logger = logging.getLogger(__name__)
 
@@ -19,28 +20,23 @@ class AnimeStreamAPI:
     """Client for the AnimeStream API."""
 
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/147.0.0.0 Safari/537.36"
-                ),
-            }
-        )
+        self.session = cloudscraper.create_scraper()
 
-    def _get(self, path: str, **params) -> dict:
+    def _get(self, path: str, **params: Any) -> Any:
         url = urljoin(f"{API_BASE}/", path.lstrip("/"))
         logger.debug("GET %s", url)
         resp = self.session.get(url, params=params, timeout=15)
         resp.raise_for_status()
         return resp.json()
 
-    def search(self, query: str) -> list[dict]:
+    def search(self, query: str, limit: int = 10) -> list[dict]:
         """Search for anime by title."""
-        data = self._get("videos/search", q=query)
-        return data if isinstance(data, list) else data.get("data", [])
+        data = self._get("search", query=query, t="all", limit=limit)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return cast("list[dict]", data.get("data", data.get("results", [])))
+        return []
 
     def popular(self, page: int = 1, limit: int = 20) -> list[dict]:
         """Get popular anime."""
