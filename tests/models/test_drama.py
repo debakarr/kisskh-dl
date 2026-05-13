@@ -36,7 +36,7 @@ def obj() -> Drama:
         "id": 6917,
         "title": "Crash Course in Romance",
     }
-    return Drama.parse_obj(reponse_data)
+    return Drama.model_validate(reponse_data)
 
 
 def test_get_episodes_ids(obj: Drama) -> None:

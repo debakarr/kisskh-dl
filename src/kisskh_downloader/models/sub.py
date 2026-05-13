@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class SubItem(BaseModel):
@@ -12,14 +12,12 @@ class SubItem(BaseModel):
     default: bool
 
 
-class Sub(BaseModel):
-    __root__: List[SubItem]
-
+class Sub(RootModel[List[SubItem]]):
     def __iter__(self):
-        return iter(self.__root__)
+        return iter(self.root)
 
     def __getitem__(self, item):
-        return self.__root__[item]
+        return self.root[item]
 
     def __len__(self) -> int:
-        return len(self.__root__)
+        return len(self.root)
