@@ -23,6 +23,32 @@ def _resolve_base_url() -> str:
     return os.getenv("KISSKH_BASE_URL", "https://kisskh.nl")
 
 
+def _dispatch_animestream(
+    content_id: str, output_dir: Path, locale: str = "ja-JP", subtitle_locale: str = "en-US", **kwargs
+) -> None:
+    """Download from AnimeStream by content ID."""
+    from streamdl.downloader import Downloader
+    from streamdl.sources.animestream import AnimeStreamAPI
+
+    logger = logging.getLogger(__name__)
+    api = AnimeStreamAPI()
+    info = api.content(content_id)
+    series = info.get("series_title", info.get("title", ""))
+    ep = info.get("episode", "0")
+    logger.info("%s - Episode %s: %s", series, ep, info.get("title", ""))
+
+    sub = subtitle_locale if subtitle_locale and subtitle_locale != "off" else None
+    stream_url = api.get_stream_url(content_id, locale=locale, subtitle_locale=sub)
+    if not stream_url:
+        logger.error("Could not get stream URL for content_id: %s", content_id)
+        return
+
+    safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in series).strip()
+    filepath = str(Path(str(output_dir)) / f"{safe}_E{ep}")
+    Downloader(referer="https://anime.uniquestream.net/").download_video_from_stream_url(stream_url, filepath, "1080p")
+    logger.info("Downloaded: %s", filepath)
+
+
 def _dispatch_dl(url_or_query: str, output_dir: Path, quality: str, **kwargs) -> None:
     """Route a download to the correct source."""
     logger = logging.getLogger(__name__)
@@ -53,7 +79,23 @@ def _dispatch_dl(url_or_query: str, output_dir: Path, quality: str, **kwargs) ->
         logger.info("Downloaded: %s", filepath)
 
     else:
-        # ── Search mode: query all sources ──
+        # ── Search mode: first try direct content_id (AnimeStream) ──
+        try:
+            from streamdl.sources.animestream import AnimeStreamAPI
+
+            info = AnimeStreamAPI().content(url_or_query)
+            if info.get("content_id"):
+                logger.info(
+                    "Direct content ID detected: %s - Episode %s",
+                    info.get("series_title", "?"),
+                    info.get("episode", "?"),
+                )
+                _dispatch_animestream(url_or_query, output_dir, **kwargs)
+                return
+        except Exception:
+            pass
+
+        # ── Search all sources ──
         logger.info("Searching all sources for: %s", url_or_query)
         results = search_all(url_or_query)
 
@@ -269,17 +311,16 @@ def dl(
 @streamdl.command(name="get-key")
 @click.argument("drama_url")
 def get_key(drama_url: str) -> None:
-    """Generate and display kkey tokens for a drama episode URL.
+    """Generate kkey tokens for a kisskh drama episode URL.
 
     Opens a headless browser to extract the authentication keys that
     kisskh requires for stream and subtitle API calls.
 
     Example:
 
-        kisskh get-key "https://kisskh.nl/Drama/A-Business-Proposal/Episode-1?id=4608&ep=86192&page=0&pageSize=100"
+        streamdl get-key "https://kisskh.nl/Drama/.../Episode-1?id=4608&ep=86192&page=0&pageSize=100"
 
-    After getting the keys, you can export them as environment variables
-    and run ``kisskh dl`` without needing a browser each time:
+    After getting the keys, set these env vars to skip the browser next time:
 
         set KISSKH_STREAM_KEY=<stream_key>
         set KISSKH_SUB_KEY=<sub_key>
@@ -336,102 +377,8 @@ def get_key(drama_url: str) -> None:
     click.echo(f"    set KISSKH_SUB_KEY={kkeys.get('sub', '')}")
     click.echo("")
     click.echo("  Then run your download command as usual:")
-    click.echo(f'    kisskh dl "{drama_url}" -o .')
+    click.echo(f'    streamdl dl "{drama_url}" -o .')
     click.echo("")
-
-
-# ── AnimeStream command group ─────────────────────────────────────────────
-
-
-@streamdl.group(name="anime")
-def anime_group():
-    """Commands for AnimeStream (https://anime.uniquestream.net/)."""
-
-
-@anime_group.command(name="dl")
-@click.argument("content_id")
-@click.option(
-    "--locale",
-    "-l",
-    default="ja-JP",
-    help="Audio language (ja-JP, en-US, etc.)",
-)
-@click.option(
-    "--subs",
-    "-s",
-    default="en-US",
-    help="Hard subtitle language (e.g. en-US, or 'off' for no subs)",
-)
-@click.option(
-    "--output-dir",
-    "-o",
-    default=Path.home() / "Downloads",
-    help="Output directory.",
-)
-def download_episode(content_id: str, locale: str, subs: str, output_dir: Path) -> None:
-    """Download an anime episode from AnimeStream by content ID.
-
-    Example:
-
-        kisskh anime dl sczeR0vi -o .
-    """
-    from streamdl.downloader import Downloader
-    from streamdl.sources.animestream import AnimeStreamAPI
-
-    logger = logging.getLogger(__name__)
-
-    api = AnimeStreamAPI()
-
-    # Get content details for filename
-    info = api.content(content_id)
-    series = info.get("series_title", info.get("title", ""))
-    ep = info.get("episode", "0")
-    title = info.get("title", "")
-    logger.info("%s - Episode %s: %s", series, ep, title)
-
-    # Get stream URL
-    sub_locale = subs if subs and subs != "off" else None
-    stream_url = api.get_stream_url(content_id, locale=locale, subtitle_locale=sub_locale)
-    if not stream_url:
-        logger.error("Could not get stream URL for content_id: %s", content_id)
-        return
-
-    logger.info("Stream URL: %s", stream_url[:80])
-
-    # Download
-    safe_series = "".join(c if c.isalnum() or c in " -_" else "_" for c in series).strip()
-    filepath = str(Path(str(output_dir)) / f"{safe_series}_E{ep}")
-
-    downloader = Downloader(referer="https://anime.uniquestream.net/")
-    downloader.download_video_from_stream_url(stream_url, filepath, "best")
-    logger.info("Download complete: %s", filepath)
-
-
-@anime_group.command()
-@click.argument("query")
-def search_anime(query: str) -> None:
-    """Search for anime on AnimeStream."""
-    from streamdl.sources.animestream import AnimeStreamAPI
-
-    api = AnimeStreamAPI()
-    results = api.search(query)
-    if not results:
-        click.echo("No results found.")
-        return
-    for r in results:
-        click.echo(f"  {r.get('title', '?')}  content_id={r.get('content_id', '?')}")
-
-
-@anime_group.command()
-@click.option("--limit", default=10, help="Number of popular items")
-def popular(limit: int) -> None:
-    """List popular anime on AnimeStream."""
-    from streamdl.sources.animestream import AnimeStreamAPI
-
-    api = AnimeStreamAPI()
-    results = api.popular(limit=limit)
-    for i, r in enumerate(results, 1):
-        click.echo(f"  {i}. {r.get('title', '?')}  content_id={r.get('content_id', '?')}")
 
 
 if __name__ == "__main__":
