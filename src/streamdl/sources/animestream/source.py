@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from streamdl.sources import register
@@ -99,7 +100,6 @@ class AnimeStreamSource:
             }
         except Exception:
             pass
-        # Series-level URL — get first episode from first season
         try:
             series = api.series(content_id)
             seasons = series.get("seasons", [])
@@ -117,3 +117,33 @@ class AnimeStreamSource:
         except Exception:
             pass
         return {"title": "", "episode": "0", "source": "animestream"}
+
+    @staticmethod
+    def download_series(url: str, output_dir: str, quality: str = "1080p", **kwargs: str) -> None:
+        """Download all episodes from an AnimeStream series."""
+        from streamdl.downloader import Downloader
+
+        logger.info("Downloading all episodes from: %s", url)
+        content_id = _extract_id(url)
+        if content_id is None:
+            logger.error("Could not extract content_id")
+            return
+        api = AnimeStreamAPI()
+        series_data = api.series(content_id)
+        series_title = series_data.get("title", "Anime")
+        for season in series_data.get("seasons", []):
+            eps = api.season_episodes(season["content_id"])
+            for ep in eps:
+                cid = ep["content_id"]
+                ep_num = str(ep.get("episode_number", ep.get("episode", 0)))
+                logger.info("Episode %s...", ep_num)
+                try:
+                    stream_url = api.get_stream_url(cid, locale="ja-JP", subtitle_locale="en-US")
+                    if not stream_url:
+                        continue
+                    safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in series_title).strip()
+                    filepath = str(Path(str(output_dir)) / f"{safe}_E{ep_num}")
+                    dl = Downloader(referer="https://anime.uniquestream.net/")
+                    dl.download_video_from_stream_url(stream_url, filepath, quality)
+                except Exception as e:
+                    logger.error("Failed episode %s: %s", ep_num, e)

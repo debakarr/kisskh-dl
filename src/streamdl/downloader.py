@@ -1,10 +1,11 @@
 """Download videos using yt-dlp or manual HLS with custom AES key handling."""
 
 import base64
+import concurrent.futures
 import logging
 import os
 import re
-import sys
+import subprocess
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -134,35 +135,56 @@ class Downloader:
         if not key_data:
             raise RuntimeError("Could not resolve decryption key")
 
-        # Download and decrypt segments
-        output_ts = f"{filepath}.ts"
-        logger.info("Downloading %d segments to %s...", len(segments), output_ts)
+        # Download segments concurrently
+        logger.info("Downloading %d segments to %s...", len(segments), filepath)
 
-        with open(output_ts, "wb") as out:
-            for i, seg_url in enumerate(segments):
-                sys.stderr.flush()
+        def fetch_segment(i_seg):
+            i, seg_url = i_seg
+            for attempt in range(3):
+                try:
+                    resp = session.get(seg_url, timeout=30)
+                    resp.raise_for_status()
+                    data = resp.content
+                    if key_data:
+                        cipher = AES.new(key_data, AES.MODE_CBC, iv or key_data)
+                        return (i, cipher.decrypt(data))
+                    return (i, data)
+                except Exception as e:
+                    if attempt == 2:
+                        raise
+                    logger.warning("Retry %d for segment %d: %s", attempt + 1, i + 1, e)
+            return (i, b"")
+
+        # Download with thread pool
+        max_workers = min(10, len(segments))
+        results: list[tuple[int, bytes]] = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = [pool.submit(fetch_segment, (i, s)) for i, s in enumerate(segments)]
+            for i, future in enumerate(concurrent.futures.as_completed(futures)):
+                results.append(future.result())
                 if (i + 1) % 25 == 0 or i == 0:
                     logger.info("Segment %d/%d...", i + 1, len(segments))
 
-                for attempt in range(3):
-                    try:
-                        resp = session.get(seg_url, timeout=30)
-                        resp.raise_for_status()
-                        data = resp.content
-                        break
-                    except Exception as e:
-                        if attempt == 2:
-                            raise
-                        logger.warning("Retry %d for segment %d: %s", attempt + 1, i + 1, e)
+        results.sort(key=lambda x: x[0])
+        temp_ts = f"{filepath}.ts"
+        with open(temp_ts, "wb") as out:
+            for _, data in results:
+                out.write(data)
 
-                if key_data:
-                    cipher = AES.new(key_data, AES.MODE_CBC, iv or key_data)
-                    decrypted = cipher.decrypt(data)
-                    out.write(decrypted)
-                else:
-                    out.write(data)
-
-        logger.info("Download complete: %s", output_ts)
+        # Remux to MP4 using ffmpeg (fast, no re-encode)
+        output_mp4 = f"{filepath}.mp4"
+        logger.info("Remuxing to MP4: %s", output_mp4)
+        try:
+            subprocess.run(  # noqa: S603,S607
+                ["ffmpeg", "-i", temp_ts, "-c", "copy", "-y", output_mp4],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            os.unlink(temp_ts)
+            logger.info("Download complete: %s", output_mp4)
+        except Exception:
+            logger.info("Remux skipped, file at: %s", temp_ts)
 
     def download_subtitles(
         self, subtitles: list[SubItem], filepath: str, decrypter: SubtitleDecrypter | None = None
