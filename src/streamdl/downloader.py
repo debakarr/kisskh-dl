@@ -84,13 +84,16 @@ class Downloader:
                 except Exception:
                     pass
 
-            # Recursively process variant playlists (lines ending in .m3u8)
+            # Recursively process variant playlists
             lines = content.split("\n")
             for i, line in enumerate(lines):
                 stripped = line.strip()
-                if stripped.endswith(".m3u8") and not stripped.startswith("#"):
-                    var_path = process_m3u8(urljoin(url, stripped))
-                    lines[i] = var_path
+                if ".m3u8" in stripped and not stripped.startswith("#"):
+                    # Extract the URL part before query string
+                    var_url = stripped.split("?")[0] if "?" in stripped else stripped
+                    if var_url.endswith(".m3u8"):
+                        var_path = process_m3u8(urljoin(url, stripped))  # pass full URL including query
+                        lines[i] = var_path
 
             # Save to temp dir. Return just filename (relative path for HTTP server).
             name = f"pl_{abs(hash(url))}.m3u8"
