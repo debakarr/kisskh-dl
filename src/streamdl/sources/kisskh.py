@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from streamdl.downloader import Downloader
 from streamdl.kisskh_api import KissKHApi
@@ -33,7 +33,7 @@ class KisskhSource:
                 {
                     "title": drama.title,
                     "id": str(drama.id),
-                    "url": f"{api.site_domain}/Drama/{drama.title.replace(' ', '-')}?id={drama.id}",
+                    "url": f"{api.site_domain}/Drama/{quote(drama.title, safe='')}?id={drama.id}",
                     "source": "kisskh",
                     "type": "drama",
                 }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from streamdl.sources import register
 
@@ -30,11 +30,13 @@ class AnimeStreamSource:
         # Response is {series: [...], movies: [...], episodes: [...]}
         for key, media_type in [("series", "anime"), ("movies", "movie")]:
             for r in data.get(key, []):
+                cid = r["content_id"]
+                title_encoded = quote(r.get("title", "?"), safe="")
                 items.append(
                     {
                         "title": r.get("title", "?"),
-                        "id": r.get("content_id", ""),
-                        "url": f"https://anime.uniquestream.net/series/{r['content_id']}/{r.get('title', '?')}",
+                        "id": cid,
+                        "url": f"https://anime.uniquestream.net/series/{cid}/{title_encoded}",
                         "source": "animestream",
                         "type": media_type,
                     }
