@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class Episode(BaseModel):
     id: int
-    number: int
+    number: float
     sub: int
 
 
@@ -35,13 +35,22 @@ class Drama(BaseModel):
         return data
 
     def get_episodes_ids(self, start: int, stop: int) -> dict[int, int]:
-        episode_ids = {}
-        if start < self.episodes[0].number or start > self.episodes[-1].number:
-            start = self.episodes[0].number
-        if stop > self.episodes[-1].number:
-            stop = self.episodes[-1].number
+        episode_ids: dict[float, int] = {}
+        first_ep = int(self.episodes[0].number)
+        last_ep = int(self.episodes[-1].number)
+        if start < first_ep:
+            start = first_ep
+        if stop > last_ep:
+            stop = last_ep
 
         for episode in self.episodes:
             episode_ids[episode.number] = episode.id
 
-        return {episode_number: episode_ids[episode_number] for episode_number in range(start, stop + 1)}
+        result: dict[int, int] = {}
+        for ep_num in range(start, stop + 1):
+            # Try exact match, then float match (e.g., 6 -> 6.0)
+            if ep_num in episode_ids:
+                result[ep_num] = episode_ids[ep_num]
+            elif float(ep_num) in episode_ids:
+                result[ep_num] = episode_ids[float(ep_num)]
+        return result
