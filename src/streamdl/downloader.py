@@ -137,12 +137,23 @@ class Downloader:
         if not key_data:
             raise RuntimeError("Could not resolve decryption key")
 
-        # Download segments concurrently with Ctrl+C handling
+        # Download segments concurrently — write each in order as it arrives
         logger.info("Downloading %d segments...", len(segments))
+        temp_ts = f"{filepath}.ts"
         original_sigint = signal.getsignal(signal.SIGINT)
 
-        def fetch_segment(i_seg):
-            i, seg_url = i_seg
+        def _on_sigint(sig, frame):
+            logger.warning("\nCtrl+C pressed, stopping...")
+            sys.exit(1)
+
+        signal.signal(signal.SIGINT, _on_sigint)
+
+        seg_buf: dict[int, bytes] = {}
+        next_idx = 0
+        written = 0
+        out = open(temp_ts, "wb")
+
+        def fetch_and_queue(i, seg_url):
             for attempt in range(3):
                 try:
                     resp = session.get(seg_url, timeout=30)
@@ -155,31 +166,29 @@ class Downloader:
                 except Exception as e:
                     if attempt == 2:
                         raise
-                    logger.warning("Retry %d for segment %d: %s", attempt + 1, i + 1, e)
+                    logger.warning("Retry %d for seg %d: %s", attempt + 1, i + 1, e)
             return (i, b"")
 
-        def sigint_handler(sig, frame):
-            logger.warning("\nCtrl+C pressed, stopping download...")
-            sys.exit(1)
-
-        signal.signal(signal.SIGINT, sigint_handler)
-        results: list[tuple[int, bytes]] = []
         max_workers = min(10, len(segments))
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [pool.submit(fetch_segment, (i, s)) for i, s in enumerate(segments)]
-                for i, future in enumerate(concurrent.futures.as_completed(futures)):
-                    results.append(future.result())
-                    if (i + 1) % 25 == 0 or i == 0:
-                        logger.info("Segment %d/%d", i + 1, len(segments))
+                futures = {pool.submit(fetch_and_queue, i, s): i for i, s in enumerate(segments)}
+                for future in concurrent.futures.as_completed(futures):
+                    idx, data = future.result()
+                    seg_buf[idx] = data
+                    # Write all consecutive segments from next_idx
+                    while next_idx in seg_buf:
+                        out.write(seg_buf.pop(next_idx))
+                        next_idx += 1
+                        written += 1
+                        if written % 25 == 0 or written == 1:
+                            logger.info("Segment %d/%d", written, len(segments))
+                    out.flush()
         finally:
+            out.close()
             signal.signal(signal.SIGINT, original_sigint)
-
-        results.sort(key=lambda x: x[0])
-        temp_ts = f"{filepath}.ts"
-        with open(temp_ts, "wb") as out:
-            for _, data in results:
-                out.write(data)
+            if written < len(segments):
+                logger.warning("Download incomplete: %d/%d segments", written, len(segments))
 
         # Remux to MP4
         output_mp4 = f"{filepath}.mp4"
