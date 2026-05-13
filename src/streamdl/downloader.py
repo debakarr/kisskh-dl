@@ -92,12 +92,12 @@ class Downloader:
                     var_path = process_m3u8(urljoin(url, stripped))
                     lines[i] = var_path
 
-            # Save to temp dir
+            # Save to temp dir. Return just filename (relative path for HTTP server).
             name = f"pl_{abs(hash(url))}.m3u8"
             local_path = os.path.join(temp_dir, name)
             with open(local_path, "w") as f:
                 f.write("\n".join(lines))
-            return local_path
+            return name  # relative path for HTTP server
 
         # Fix all playlists
         fixed_master = process_m3u8(video_stream_url)
