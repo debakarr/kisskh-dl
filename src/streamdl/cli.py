@@ -43,10 +43,11 @@ def _dispatch_animestream(
         logger.error("Could not get stream URL for content_id: %s", content_id)
         return
 
-    safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in series).strip()
-    filepath = str(Path(str(output_dir)) / f"{safe}_E{ep}")
+    safe = series.replace(" ", "_").replace(":", "").replace("/", "_").strip()
+    ep_int = int(float(ep))
+    filepath = str(Path(str(output_dir)) / f"{safe}_E{ep_int:02d}")
     Downloader(referer="https://anime.uniquestream.net/").download_video_from_stream_url(stream_url, filepath, "1080p")
-    logger.info("Downloaded: %s", filepath)
+    logger.info("Downloaded: %s.mp4 or %s.ts", filepath, filepath)
 
 
 def _dispatch_dl(url_or_query: str, output_dir: Path, quality: str, **kwargs) -> None:

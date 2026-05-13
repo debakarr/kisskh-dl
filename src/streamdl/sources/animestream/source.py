@@ -131,27 +131,29 @@ class AnimeStreamSource:
         api = AnimeStreamAPI()
         series_data = api.series(content_id)
         series_title = series_data.get("title", "Anime")
-        safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in series_title).strip()
+        safe = series_title.replace(" ", "_").replace(":", "").replace("/", "_").strip()
         total = 0
         for season in series_data.get("seasons", []):
             eps = api.season_episodes(season["content_id"])
             for ep in eps:
                 cid = ep["content_id"]
-                ep_num = str(ep.get("episode_number", ep.get("episode", 0)))
-                output_path = Path(output_dir) / f"{safe}_E{ep_num}.mp4"
-                if output_path.exists():
-                    logger.info("Episode %s already exists at %s, skipping", ep_num, output_path)
+                ep_num = int(ep.get("episode_number", ep.get("episode", 0)))
+                filename = f"{safe}_E{ep_num:02d}"
+                mp4_path = Path(output_dir) / f"{filename}.mp4"
+                ts_path = Path(output_dir) / f"{filename}.ts"
+                if mp4_path.exists() or ts_path.exists():
+                    logger.info("Episode %d already exists, skipping", ep_num)
                     total += 1
                     continue
-                logger.info("Downloading Episode %s -> %s", ep_num, output_path)
+                logger.info("Downloading Episode %d -> %s", ep_num, mp4_path)
                 try:
                     stream_url = api.get_stream_url(cid, locale="ja-JP", subtitle_locale="en-US")
                     if not stream_url:
                         continue
-                    filepath = str(Path(str(output_dir)) / f"{safe}_E{ep_num}")
+                    filepath = str(Path(str(output_dir)) / filename)
                     dl = Downloader(referer="https://anime.uniquestream.net/")
                     dl.download_video_from_stream_url(stream_url, filepath, quality)
                     total += 1
                 except Exception as e:
-                    logger.error("Failed episode %s: %s", ep_num, e)
-        logger.info("Series download complete: %d episodes saved to %s", total, output_dir)
+                    logger.error("Failed episode %d: %s", ep_num, e)
+        logger.info("Series download complete: %d episodes in %s", total, output_dir)
