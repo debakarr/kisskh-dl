@@ -95,7 +95,7 @@ class Downloader:
                     var_path = os.path.join(temp_dir, var_name)
                     with open(var_path, "w") as f:
                         f.write(var_fixed)
-                    new_lines.append(var_path)
+                    new_lines.append("file:///" + var_path.replace("\\", "/"))
                 else:
                     new_lines.append(line)
             master = "\n".join(new_lines)
@@ -110,7 +110,7 @@ class Downloader:
             fixed_path = fix_all_playlists(video_stream_url)
             logger.info("Retrying with fixed playlist...")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download(fixed_path)
+                ydl.download("file:///" + fixed_path.replace("\\", "/"))
         finally:
             import shutil
 
