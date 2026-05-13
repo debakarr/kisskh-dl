@@ -10,6 +10,7 @@ Supports movies and TV shows via TMDB IDs.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from urllib.parse import urlparse
 
@@ -56,16 +57,43 @@ class CinebyAPI:
 
     _playwright_available = None
 
-    def __init__(self, headless: bool = False, timeout: int = 30000):
+    def __init__(
+        self,
+        headless: bool = False,
+        timeout: int = 60000,
+        user_data_dir: str | None = None,
+    ):
         """Initialize the Cineby API client.
 
         Args:
             headless: Whether to run the browser in headless mode.
-                      Set to False (default) to avoid Cloudflare detection.
             timeout: Maximum time to wait for page load in milliseconds.
+            user_data_dir: Path to Chrome user data directory for persistent
+                sessions. If None, tries to auto-detect the default Chrome profile.
+                Using a real profile helps bypass Cloudflare challenges.
         """
         self.headless = headless
         self.timeout = timeout
+        self.user_data_dir = user_data_dir or self._default_chrome_profile()
+
+    @staticmethod
+    def _default_chrome_profile() -> str | None:
+        """Auto-detect the default Chrome user data directory."""
+        if os.name == "nt":  # Windows
+            base = os.environ.get("LOCALAPPDATA", "")
+            if base:
+                default = os.path.join(base, "Google", "Chrome", "User Data")
+                if os.path.isdir(default):
+                    return default
+        elif os.name == "posix":  # Linux/Mac
+            home = os.environ.get("HOME", "")
+            for path in [
+                os.path.join(home, ".config", "google-chrome"),
+                os.path.join(home, "Library", "Application Support", "Google", "Chrome"),
+            ]:
+                if os.path.isdir(path):
+                    return path
+        return None
 
     def _check_playwright(self) -> bool:
         """Check if Playwright is installed."""
@@ -109,20 +137,42 @@ class CinebyAPI:
         logger.info("Loading Cineby page: %s", play_url)
 
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(
-                headless=self.headless,
-                args=["--disable-blink-features=AutomationControlled"],
+            # Try to use real Chrome for better Cloudflare handling
+            chrome_path = None
+            for path in [
+                "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+            ]:
+                if os.path.isfile(path):
+                    chrome_path = path
+                    break
+
+            if chrome_path:
+                browser = pw.chromium.launch(
+                    headless=self.headless,
+                    executable_path=chrome_path,
+                    args=[
+                        "--disable-blink-features=AutomationControlled",
+                        "--no-sandbox",
+                    ],
+                )
+            else:
+                browser = pw.chromium.launch(
+                    headless=self.headless,
+                    args=["--disable-blink-features=AutomationControlled"],
+                )
+
+            user_agent = (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/147.0.0.0 Safari/537.36"
+            )
+            context = browser.new_context(
+                user_agent=user_agent,
+                locale="en-US",
+                viewport={"width": 1920, "height": 1080},  # type: ignore[arg-type]
             )
 
-            context = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/147.0.0.0 Safari/537.36"
-                ),
-                locale="en-US",
-                viewport={"width": 1920, "height": 1080},
-            )
             page = context.new_page()
 
             captured_sources: list[str] = []
