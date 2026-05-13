@@ -5,7 +5,9 @@ import concurrent.futures
 import logging
 import os
 import re
+import signal
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
@@ -135,8 +137,9 @@ class Downloader:
         if not key_data:
             raise RuntimeError("Could not resolve decryption key")
 
-        # Download segments concurrently
-        logger.info("Downloading %d segments to %s...", len(segments), filepath)
+        # Download segments concurrently with Ctrl+C handling
+        logger.info("Downloading %d segments...", len(segments))
+        original_sigint = signal.getsignal(signal.SIGINT)
 
         def fetch_segment(i_seg):
             i, seg_url = i_seg
@@ -155,15 +158,22 @@ class Downloader:
                     logger.warning("Retry %d for segment %d: %s", attempt + 1, i + 1, e)
             return (i, b"")
 
-        # Download with thread pool
-        max_workers = min(10, len(segments))
+        def sigint_handler(sig, frame):
+            logger.warning("\nCtrl+C pressed, stopping download...")
+            sys.exit(1)
+
+        signal.signal(signal.SIGINT, sigint_handler)
         results: list[tuple[int, bytes]] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-            futures = [pool.submit(fetch_segment, (i, s)) for i, s in enumerate(segments)]
-            for i, future in enumerate(concurrent.futures.as_completed(futures)):
-                results.append(future.result())
-                if (i + 1) % 25 == 0 or i == 0:
-                    logger.info("Segment %d/%d...", i + 1, len(segments))
+        max_workers = min(10, len(segments))
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = [pool.submit(fetch_segment, (i, s)) for i, s in enumerate(segments)]
+                for i, future in enumerate(concurrent.futures.as_completed(futures)):
+                    results.append(future.result())
+                    if (i + 1) % 25 == 0 or i == 0:
+                        logger.info("Segment %d/%d", i + 1, len(segments))
+        finally:
+            signal.signal(signal.SIGINT, original_sigint)
 
         results.sort(key=lambda x: x[0])
         temp_ts = f"{filepath}.ts"
@@ -171,7 +181,7 @@ class Downloader:
             for _, data in results:
                 out.write(data)
 
-        # Remux to MP4 using ffmpeg (fast, no re-encode)
+        # Remux to MP4
         output_mp4 = f"{filepath}.mp4"
         logger.info("Remuxing to MP4: %s", output_mp4)
         try:
