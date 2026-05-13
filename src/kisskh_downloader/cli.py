@@ -92,6 +92,13 @@ def kisskh(verbose):
     help="Pre-generated kkey for subtitle endpoint (or set KISSKH_SUB_KEY env var). "
     "Skips browser-based kkey generation.",
 )
+@click.option(
+    "--subs-only",
+    "-so",
+    is_flag=True,
+    default=False,
+    help="Download subtitles only, skip video download.",
+)
 def dl(
     drama_url_or_name: str,
     first: int,
@@ -104,6 +111,7 @@ def dl(
     initialization_vector: str,
     stream_key: str,
     sub_key: str,
+    subs_only: bool = False,
 ) -> None:
     """Download episodes from kisskh.
 
@@ -174,8 +182,15 @@ def dl(
                 )
                 continue
 
-        video_stream_url = kisskh_api.get_stream_url(current_episode_id, kkeys.get("stream", ""))
         subtitles = kisskh_api.get_subtitles(current_episode_id, kkeys.get("sub", ""), *sub_langs)
+
+        if subs_only:
+            filepath = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}"
+            logger.info("Downloading subtitles for Episode %s...", episode_number)
+            downloader.download_subtitles(subtitles, filepath, decrypter)
+            continue
+
+        video_stream_url = kisskh_api.get_stream_url(current_episode_id, kkeys.get("stream", ""))
         if "tickcounter" in video_stream_url:
             logger.warning("Episode %s still not released!", episode_number)
             continue
