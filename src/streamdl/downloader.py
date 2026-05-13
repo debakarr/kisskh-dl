@@ -2,7 +2,6 @@
 
 import logging
 import os
-import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -55,33 +54,18 @@ class Downloader:
             else:
                 raise
 
-        # Fallback: direct ffmpeg with proper args
-        output = f"{filepath}.mp4"
-        logger.info("Downloading directly with ffmpeg to: %s", output)
-        cmd = [
-            "ffmpeg",
+        # Fallback: use yt-dlp with ffmpeg as downloader
+        logger.info("Retrying with yt-dlp + ffmpeg downloader...")
+        ydl_opts["hls_prefer_native"] = False
+        ydl_opts["external_downloader"] = "ffmpeg"
+        ydl_opts["external_downloader_args"] = [
             "-allowed_extensions",
             "ALL",
             "-protocol_whitelist",
-            "file,http,https,tcp,tls",
-            "-i",
-            video_stream_url,
-            "-map",
-            "0:v?",
-            "-map",
-            "0:a?",
-            "-c",
-            "copy",
-            "-bsf:a",
-            "aac_adtstoasc",
-            "-y",
-            output,
+            "file,http,https,tcp,tls,crypto",
         ]
-        logger.debug("Running: %s", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
-        if result.returncode != 0:
-            logger.error("ffmpeg failed: %s", result.stderr[-500:])
-            raise RuntimeError(f"ffmpeg exited with code {result.returncode}")
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download(video_stream_url)
 
     def download_subtitles(
         self, subtitles: list[SubItem], filepath: str, decrypter: SubtitleDecrypter | None = None
