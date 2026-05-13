@@ -1,7 +1,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import List, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -44,7 +43,7 @@ class Downloader:
             ydl.download(video_stream_url)
 
     def download_subtitles(
-        self, subtitles: List[SubItem], filepath: str, decrypter: Optional[SubtitleDecrypter] = None
+        self, subtitles: list[SubItem], filepath: str, decrypter: SubtitleDecrypter | None = None
     ) -> None:
         """Download subtitles
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel, Field, RootModel
 
 
@@ -14,7 +12,7 @@ class DramaInfo(BaseModel):
     title: str
 
 
-class Search(RootModel[List[DramaInfo]]):
+class Search(RootModel[list[DramaInfo]]):
     def __iter__(self):
         return iter(self.root)
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -19,7 +19,7 @@ class Drama(BaseModel):
     status: str
     type: str
     next_ep_date_id: int = Field(..., alias="nextEpDateID")
-    episodes: List[Episode]
+    episodes: list[Episode]
     episodes_count: int = Field(..., alias="episodesCount")
     label: Any
     favorite_id: int = Field(..., alias="favoriteID")
@@ -34,7 +34,7 @@ class Drama(BaseModel):
             data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
         return data
 
-    def get_episodes_ids(self, start: int, stop: int) -> Dict[int, int]:
+    def get_episodes_ids(self, start: int, stop: int) -> dict[int, int]:
         episode_ids = {}
         if start < self.episodes[0].number or start > self.episodes[-1].number:
             start = self.episodes[0].number

@@ -18,8 +18,10 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: uv sync
-      - name: Run flake8 (along with black, isort and bandit wrapper)
-        run: uv run flake8 src tests
+      - name: Run ruff linter
+        run: uv run ruff check src tests
+      - name: Run ruff formatter check
+        run: uv run ruff format --check src tests
       - name: Run mypy
         run: uv run mypy --ignore-missing-imports src
       - name: Run pytest

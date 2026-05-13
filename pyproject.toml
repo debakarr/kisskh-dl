@@ -22,22 +22,41 @@ kisskh = "kisskh_downloader.cli:kisskh"
 [dependency-groups]
 dev = [
     "datamodel-code-generator[http]>=0.57.0",
-    "flake8>=7.3.0",
-    "flake8-bugbear>=25.11.29",
-    "flake8-black>=0.4.0",
-    "flake8-bandit>=4.1.1",
-    "flake8-comprehensions>=3.17.0",
-    "flake8-isort>=7.0.0",
-    "pep8-naming>=0.15.1",
     "pytest-cov>=7.1.0",
     "mypy>=2.1.0",
-    "black>=26.3.1",
+    "ruff>=0.11.0",
     "types-requests>=2.33.0.20260508",
     "playwright>=1.59.0",
 ]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "N",    # pep8-naming
+    "C4",   # flake8-comprehensions
+    "S",    # flake8-bandit
+    "UP",   # pyupgrade
+]
+ignore = [
+    "B904",    # raise-without-from-inside-except
+    "S101",    # assert-in-test (ok for tests)
+    "S110",    # try-except-pass
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [build-system]
 requires = ["uv_build>=0.11.14,<0.12"]
