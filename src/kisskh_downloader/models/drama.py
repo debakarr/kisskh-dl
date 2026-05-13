@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Episode(BaseModel):
@@ -27,9 +27,12 @@ class Drama(BaseModel):
     id: int
     title: str
 
-    def __init__(self, **data: Any) -> None:
-        data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
-        super().__init__(**data)
+    @model_validator(mode="before")
+    @classmethod
+    def sort_episodes(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "episodes" in data:
+            data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
+        return data
 
     def get_episodes_ids(self, start: int, stop: int) -> Dict[int, int]:
         episode_ids = {}

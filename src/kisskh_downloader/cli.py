@@ -18,6 +18,14 @@ from kisskh_downloader.kisskh_api import KissKHApi
 load_dotenv()
 
 
+def _resolve_base_url() -> str:
+    """Return the base URL from env or default."""
+    return os.getenv("KISSKH_BASE_URL", "https://kisskh.nl")
+
+
+# ── Top-level CLI group ──────────────────────────────────────────────────
+
+
 @click.group()
 @click.option("-v", "--verbose", count=True, help="Increase log level verbosity")
 def kisskh(verbose):
@@ -26,6 +34,9 @@ def kisskh(verbose):
         logging.getLogger().setLevel(logging.INFO)
     elif verbose >= 2:
         logging.getLogger().setLevel(logging.DEBUG)
+
+
+# ── Download command ─────────────────────────────────────────────────────
 
 
 @kisskh.command()
@@ -62,13 +73,25 @@ def kisskh(verbose):
     "--key",
     "-k",
     default=os.getenv("KISSKH_KEY"),
-    help="Decryption key",
+    help="Subtitle decryption key (or set KISSKH_KEY env var).",
 )
 @click.option(
     "--initialization-vector",
     "-iv",
     default=os.getenv("KISSKH_INITIALIZATION_VECTOR"),
-    help="Initialization vector for decryption",
+    help="Initialization vector for subtitle decryption (or set KISSKH_INITIALIZATION_VECTOR env var).",
+)
+@click.option(
+    "--stream-key",
+    default=os.getenv("KISSKH_STREAM_KEY"),
+    help="Pre-generated kkey for stream endpoint (or set KISSKH_STREAM_KEY env var). "
+    "Skips browser-based kkey generation.",
+)
+@click.option(
+    "--sub-key",
+    default=os.getenv("KISSKH_SUB_KEY"),
+    help="Pre-generated kkey for subtitle endpoint (or set KISSKH_SUB_KEY env var). "
+    "Skips browser-based kkey generation.",
 )
 def dl(
     drama_url_or_name: str,
@@ -80,20 +103,30 @@ def dl(
     decrypt_subtitle: bool,
     key: str,
     initialization_vector: str,
+    stream_key: str,
+    sub_key: str,
 ) -> None:
+    """Download episodes from kisskh.
+
+    DRAMA_URL_OR_NAME can be a full URL (e.g. https://kisskh.nl/Drama/Some-Show?id=1234)
+    or a search query (e.g. "Stranger Things").
+    """
     logger = logging.getLogger(__name__)
 
     if decrypt_subtitle and not (key and initialization_vector):
         raise click.UsageError(
             "--key and --initialization-vector must be provided when --decrypt-subtitle is set. "
-            "Either pass them or set them via KISSKH_KEY and KISSKH_INITIALIZATION_VECTOR environment variable."
+            "Either pass them or set them via KISSKH_KEY and KISSKH_INITIALIZATION_VECTOR "
+            "environment variables."
         )
 
     decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector) if decrypt_subtitle else None
 
-    kisskh_api = KissKHApi()
-    downloader = Downloader(referer="https://kisskh.co")
+    base_url = _resolve_base_url()
+    kisskh_api = KissKHApi(base_url=base_url)
+    downloader = Downloader(referer=base_url)
     episode_ids: Dict[int, int] = {}
+
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
         ids = parse_qs(parsed_url.query).get("id")
@@ -118,18 +151,119 @@ def dl(
     if not episode_ids:
         episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
 
-    for episode_number, episode_id in episode_ids.items():  # type: ignore
-        logger.info(f"Getting details for Episode {episode_number}...")
-        video_stream_url = kisskh_api.get_stream_url(episode_id)  # type: ignore
-        subtitles = kisskh_api.get_subtitles(episode_id, *sub_langs)  # type: ignore
+    for episode_number, current_episode_id in episode_ids.items():  # type: ignore
+        logger.info("Getting details for Episode %s...", episode_number)
+
+        # Generate or retrieve kkey tokens
+        if stream_key and sub_key:
+            kkeys = {"stream": stream_key, "sub": sub_key}
+            logger.debug("Using kkey from command-line / environment variables")
+        else:
+            logger.info("Generating authentication token for Episode %s...", episode_number)
+            try:
+                kkeys = kisskh_api.generate_kkeys(
+                    drama_id=drama_id,
+                    episode_id=current_episode_id,
+                    episode_number=episode_number,
+                    drama_title=drama_name,
+                )
+            except Exception as e:
+                logger.error("Failed to generate authentication token for Episode %s: %s", episode_number, e)
+                logger.error(
+                    "Tip: Set KISSKH_STREAM_KEY and KISSKH_SUB_KEY environment variables "
+                    "to skip browser-based kkey generation."
+                )
+                continue
+
+        video_stream_url = kisskh_api.get_stream_url(current_episode_id, kkeys.get("stream", ""))
+        subtitles = kisskh_api.get_subtitles(current_episode_id, kkeys.get("sub", ""), *sub_langs)
         if "tickcounter" in video_stream_url:
-            logger.warning(f"Episode {episode_number} still not released!")
+            logger.warning("Episode %s still not released!", episode_number)
             continue
 
         filepath = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}"
-        logger.debug(f"Using video url: {video_stream_url}")
+        logger.debug("Using video url: %s", video_stream_url)
         downloader.download_video_from_stream_url(video_stream_url, filepath, quality)
         downloader.download_subtitles(subtitles, filepath, decrypter)
+
+    kisskh_api.cleanup()
+
+
+# ── Get-key command ──────────────────────────────────────────────────────
+
+
+@kisskh.command(name="get-key")
+@click.argument("drama_url")
+def get_key(drama_url: str) -> None:
+    """Generate and display kkey tokens for a drama episode URL.
+
+    Opens a headless browser to extract the authentication keys that
+    kisskh requires for stream and subtitle API calls.
+
+    Example:
+
+        kisskh get-key "https://kisskh.nl/Drama/A-Business-Proposal/Episode-1?id=4608&ep=86192&page=0&pageSize=100"
+
+    After getting the keys, you can export them as environment variables
+    and run ``kisskh dl`` without needing a browser each time:
+
+        set KISSKH_STREAM_KEY=<stream_key>
+        set KISSKH_SUB_KEY=<sub_key>
+    """
+    if not validators.url(drama_url):
+        raise click.UsageError("A valid episode URL is required.")
+
+    parsed_url = urlparse(drama_url)
+    params = parse_qs(parsed_url.query)
+
+    drama_id_str = params.get("id", [None])[0]
+    episode_id_str = params.get("ep", [None])[0]
+    if not drama_id_str or not episode_id_str:
+        raise click.UsageError(
+            "URL must contain both ?id=... and &ep=... parameters. "
+            "Example: https://kisskh.nl/Drama/.../Episode-1?id=1234&ep=5678"
+        )
+
+    drama_id = int(drama_id_str)
+    episode_id = int(episode_id_str)
+    episode_number = 0
+    if episode_string := re.search(r"Episode-(\d+)", parsed_url.path):
+        episode_number = int(episode_string.group(1))
+
+    drama_slug = parsed_url.path.split("/")[2].replace("-", "_")
+
+    base_url = _resolve_base_url()
+    kisskh_api = KissKHApi(base_url=base_url)
+
+    click.echo("Launching browser to extract kkey tokens...")
+    try:
+        kkeys = kisskh_api.generate_kkeys(
+            drama_id=drama_id,
+            episode_id=episode_id,
+            episode_number=episode_number,
+            drama_title=drama_slug,
+        )
+    except Exception as e:
+        raise click.ClickException(f"Failed to generate kkey: {e}")
+    finally:
+        kisskh_api.cleanup()
+
+    click.echo("")
+    click.echo("─" * 50)
+    click.echo("  kkey tokens generated successfully!")
+    click.echo("─" * 50)
+    click.echo("")
+    click.echo(f"  Stream key:  {kkeys.get('stream', 'N/A')}")
+    click.echo(f"  Sub key:     {kkeys.get('sub', 'N/A')}")
+    click.echo("")
+    click.echo("  To use these without a browser next time, set these env vars:")
+    click.echo("")
+    click.echo(f'    set KISSKH_STREAM_KEY={kkeys.get("stream", "")}')
+    click.echo(f'    set KISSKH_SUB_KEY={kkeys.get("sub", "")}')
+    click.echo("")
+    click.echo("  Then run your download command as usual:")
+    click.echo(f'    kisskh dl "{drama_url}" -o .')
+    click.echo("")
 
 
 if __name__ == "__main__":

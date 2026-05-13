@@ -28,7 +28,14 @@ class Downloader:
             "format": f"bestvideo[height<={quality[:-1]}]+bestaudio/best[height<={quality[:-1]}]/best",
             "concurrent_fragment_downloads": 15,
             "outtmpl": f"{filepath}.%(ext)s",
-            "http_headers": {"Referer": self.referer},
+            "http_headers": {
+                "Referer": self.referer,
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/147.0.0.0 Safari/537.36"
+                ),
+            },
             "verbose": logger.getEffectiveLevel() == logging.DEBUG,
             "retries": 10,
         }
