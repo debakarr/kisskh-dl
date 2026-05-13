@@ -98,8 +98,8 @@ def _dispatch_dl(url_or_query: str, output_dir: Path, quality: str, **kwargs) ->
                 )
                 _dispatch_animestream(url_or_query, output_dir, **kwargs)
                 return
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Content ID detection failed: %s", e)
 
         # ── Search all sources ──
         logger.info("Searching all sources for: %s", url_or_query)
