@@ -1,29 +1,21 @@
-"""Download videos using yt-dlp with HLS preprocessing for non-standard keys."""
+"""Download videos using yt-dlp or manual HLS with custom AES key handling."""
 
 import base64
 import logging
 import os
 import re
-import tempfile
-import threading
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+import sys
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 import requests
 import yt_dlp
+from Cryptodome.Cipher import AES
 
 from streamdl.helper.decrypt_subtitle import SubtitleDecrypter
 from streamdl.models.sub import SubItem
 
 logger = logging.getLogger(__name__)
-
-
-class _QuietHandler(SimpleHTTPRequestHandler):
-    """HTTP handler that doesn't log to stdout."""
-
-    def log_message(self, *args):
-        pass
 
 
 class Downloader:
@@ -39,7 +31,15 @@ class Downloader:
                 "Chrome/147.0.0.0 Safari/537.36"
             ),
         }
+        session = requests.Session()
+        session.headers.update(headers)
 
+        # For CDNs that use base64-encoded AES keys (.png segments, mediacache.cc)
+        if "mediacache.cc" in video_stream_url:
+            self._download_hls_manual(session, video_stream_url, filepath)
+            return
+
+        # Default: use yt-dlp
         ydl_opts = {
             "format": f"bestvideo[height<={quality[:-1]}]+bestaudio/best[height<={quality[:-1]}]/best",
             "concurrent_fragment_downloads": 15,
@@ -48,113 +48,121 @@ class Downloader:
             "verbose": logger.getEffectiveLevel() == logging.DEBUG,
             "retries": 10,
         }
-        logger.debug("Download options: %s", ydl_opts)
-
-        # For CDNs with known key format issues, preprocess playlists first
-        # to avoid download-then-fail-then-resume problems
-        need_fix = "mediacache.cc" in video_stream_url
-
-        if need_fix:
-            # Preprocess playlists first to fix base64 keys
-            (fixed_master, temp_dir, server) = self._prepare_fixed_playlist(video_stream_url, headers)
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download(fixed_master)
-            finally:
-                server.shutdown()
-                import shutil
-
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            return
-
-        # Try native yt-dlp first
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download(video_stream_url)
-            return
         except Exception as e:
-            if "key length" not in str(e):
+            # Try fallback to manual HLS for key format issues
+            if "key length" in str(e).lower():
+                logger.info("Key format issue, falling back to manual HLS...")
+                self._download_hls_manual(session, video_stream_url, filepath)
+            else:
                 raise
 
-        # ── Fix base64-encoded AES keys by preprocessing playlists ──
-        (fixed_url, temp_dir, server) = self._prepare_fixed_playlist(video_stream_url, headers)
-        try:
-            logger.info("Downloading with fixed playlist at %s", fixed_url)
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download(fixed_url)
-        finally:
-            server.shutdown()
-            import shutil
+    def _download_hls_manual(self, session: requests.Session, master_url: str, filepath: str) -> None:
+        """Download HLS stream manually, handling base64-encoded AES keys."""
+        logger.info("Downloading HLS stream manually...")
 
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        # Download master playlist
+        resp = session.get(master_url, timeout=15)
+        resp.raise_for_status()
+        master = resp.text
 
-    def _prepare_fixed_playlist(self, url: str, headers: dict) -> tuple[str, str, HTTPServer]:
-        """Preprocess HLS playlists: decode base64 keys, serve via local HTTP server.
-        Returns (local_url, temp_dir, server)."""
-        logger.info("Fixing AES key format in HLS playlists...")
-        session = requests.Session()
-        session.headers.update(headers)
+        # Find variant playlist URL (prefer 1080p, fallback to first)
+        var_url = None
+        for line in master.split("\n"):
+            line = line.strip()
+            if ".m3u8" in line and not line.startswith("#"):
+                if "1080" in line or var_url is None:
+                    var_url = urljoin(master_url, line)
+        if not var_url:
+            raise RuntimeError("No variant playlist found")
 
-        temp_dir = tempfile.mkdtemp(prefix="streamdl_")
+        logger.debug("Variant: %s", var_url[:80])
 
-        def process_m3u8(m3u8_url: str) -> str:
-            resp = session.get(m3u8_url, timeout=15)
-            resp.raise_for_status()
-            content = resp.text
+        # Download variant playlist
+        resp = session.get(var_url, timeout=15)
+        resp.raise_for_status()
+        var_text = resp.text
 
-            for m in re.finditer(r'#EXT-X-KEY:METHOD=AES-128,URI="([^"]+)"', content):
-                key_url = urljoin(m3u8_url, m.group(1))
-                try:
-                    kr = session.get(key_url, timeout=15)
-                    raw = kr.content.strip()
-                    decoded = base64.b64decode(raw)
-                    data_uri = f"data:text/plain;base64,{base64.b64encode(decoded).decode()}"
-                    content = content.replace(m.group(1), data_uri)
-                except Exception:
-                    pass
+        # Get query parameters for segment URLs
+        var_query = ("?" + var_url.split("?", 1)[1]) if "?" in var_url else ""
 
-            # Extract query params from playlist URL (needed for segment auth)
-            playlist_query = ""
-            if "?" in m3u8_url:
-                playlist_query = "?" + m3u8_url.split("?", 1)[1]
+        # Parse segments
+        segments: list[str] = []
+        key_data: bytes | None = None
+        iv: bytes | None = None
+        key_url_str: str | None = None
 
-            lines = content.split("\n")
-            for i, line in enumerate(lines):
-                stripped = line.strip()
-                if not stripped or stripped.startswith("#"):
-                    continue
-                # Check if it's a variant playlist (contains .m3u8)
-                if ".m3u8" in stripped:
-                    var_clean = stripped.split("?")[0] if "?" in stripped else stripped
-                    if var_clean.endswith(".m3u8"):
-                        var_path = process_m3u8(urljoin(m3u8_url, stripped))
-                        lines[i] = var_path
-                    else:
-                        lines[i] = urljoin(m3u8_url, stripped)
+        for line in var_text.split("\n"):
+            stripped = line.strip()
+
+            # Find key URL
+            if "#EXT-X-KEY" in stripped:
+                km = re.search(r'URI="([^"]+)"', stripped)
+                if km:
+                    key_url_str = urljoin(master_url, km.group(1))
+                ivm = re.search(r"IV=0x([0-9A-Fa-f]+)", stripped)
+                if ivm:
+                    iv = bytes.fromhex(ivm.group(1))
+
+            # Find segment URLs
+            if stripped and not stripped.startswith("#"):
+                seg_url = urljoin(var_url, stripped)
+                # Add query params if not present
+                if "?" not in seg_url and var_query:
+                    seg_url += var_query
+                segments.append(seg_url)
+
+        # Resolve and decode key
+        if key_url_str:
+            # Resolve relative to master or variant
+            key_url = urljoin(master_url, key_url_str)
+            logger.debug("Key URL: %s", key_url[:80])
+            kr = session.get(key_url, timeout=15)
+            key_raw = kr.content.strip()
+            # Try base64 decode first; fall back to raw first 16 bytes
+            try:
+                key_data = base64.b64decode(key_raw)[:16]
+            except Exception:
+                key_data = key_raw[:16]
+            logger.debug("Key (%d bytes): %s", len(key_data), key_data.hex())
+
+        if iv is None and key_data:
+            iv = key_data  # Default: IV = key
+
+        if not key_data:
+            raise RuntimeError("Could not resolve decryption key")
+
+        # Download and decrypt segments
+        output_ts = f"{filepath}.ts"
+        logger.info("Downloading %d segments to %s...", len(segments), output_ts)
+
+        with open(output_ts, "wb") as out:
+            for i, seg_url in enumerate(segments):
+                sys.stderr.flush()
+                if (i + 1) % 25 == 0 or i == 0:
+                    logger.info("Segment %d/%d...", i + 1, len(segments))
+
+                for attempt in range(3):
+                    try:
+                        resp = session.get(seg_url, timeout=30)
+                        resp.raise_for_status()
+                        data = resp.content
+                        break
+                    except Exception as e:
+                        if attempt == 2:
+                            raise
+                        logger.warning("Retry %d for segment %d: %s", attempt + 1, i + 1, e)
+
+                if key_data:
+                    cipher = AES.new(key_data, AES.MODE_CBC, iv or key_data)
+                    decrypted = cipher.decrypt(data)
+                    out.write(decrypted)
                 else:
-                    # Segment URL - make absolute and preserve query params
-                    abs_url = urljoin(m3u8_url.split("?")[0], stripped)
-                    abs_url += playlist_query
-                    lines[i] = abs_url
+                    out.write(data)
 
-            name = f"pl_{abs(hash(m3u8_url))}.m3u8"
-            local_path = os.path.join(temp_dir, name)
-            with open(local_path, "w") as f:
-                f.write("\n".join(lines))
-            return name
-
-        fixed_master_name = process_m3u8(url)
-
-        server = HTTPServer(("127.0.0.1", 0), _QuietHandler)
-        port = server.server_address[1]
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-
-        os.chdir(temp_dir)
-        # Restore cwd when caller continues
-        local_url = f"http://127.0.0.1:{port}/{fixed_master_name}"
-        logger.info("Serving fixed playlist at %s", local_url)
-        return local_url, temp_dir, server
+        logger.info("Download complete: %s", output_ts)
 
     def download_subtitles(
         self, subtitles: list[SubItem], filepath: str, decrypter: SubtitleDecrypter | None = None
