@@ -265,5 +265,81 @@ def get_key(drama_url: str) -> None:
     click.echo("")
 
 
+# ── Cineby command group ─────────────────────────────────────────────────
+
+
+@kisskh.group(name="cineby")
+def cineby():
+    """Commands for Cineby (https://www.cineby.sc/)."""
+
+
+@cineby.command()
+@click.argument("url")
+@click.option(
+    "--quality",
+    "-q",
+    default="best",
+    help="Preferred quality (best, 1080p, 720p, etc.)",
+)
+@click.option(
+    "--output-dir",
+    "-o",
+    default=Path.home() / "Downloads",
+    help="Output directory where downloaded files will be stored.",
+)
+@click.option(
+    "--headless",
+    is_flag=True,
+    default=False,
+    help="Run browser in headless mode (may trigger Cloudflare).",
+)
+def download(url: str, quality: str, output_dir: Path, headless: bool) -> None:
+    """Download a movie or episode from Cineby.
+
+    Opens a browser window to handle Cloudflare and source decryption,
+    then downloads the video.
+
+    Example:
+
+        kisskh cineby download https://www.cineby.sc/movie/687163 -o .
+    """
+    from kisskh_downloader.downloader import Downloader
+    from kisskh_downloader.sources.cineby import CinebyAPI
+
+    logger = logging.getLogger(__name__)
+    logger.info("Extracting video source from Cineby...")
+
+    api = CinebyAPI(headless=headless)
+    stream_url = api.get_stream_url(url, preferred_quality=quality)
+
+    if not stream_url:
+        logger.error("Could not find any video source on this page.")
+        return
+
+    media_type = _extract_cineby_type(url)
+    tmdb_id = _extract_cineby_id(url)
+    output_path = Path(str(output_dir)) / f"cineby_{media_type}_{tmdb_id}"
+
+    downloader = Downloader(referer="https://www.cineby.sc/")
+    downloader.download_video_from_stream_url(stream_url, str(output_path), quality)
+    logger.info("Download complete: %s", output_path)
+
+
+def _extract_cineby_type(url: str) -> str:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    parts = parsed.path.rstrip("/").split("/")
+    return parts[-2].lower() if len(parts) >= 2 else "movie"
+
+
+def _extract_cineby_id(url: str) -> int:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    parts = parsed.path.rstrip("/").split("/")
+    return int(parts[-1].split("?")[0])
+
+
 if __name__ == "__main__":
     kisskh()
