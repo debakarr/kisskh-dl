@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sys
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import requests
 
@@ -47,7 +46,7 @@ class KissKHApi:
         return urljoin(self.base_url, f"DramaList/Drama/{drama_id}?isq=false")
 
     def _search_api_url(self, query: str) -> str:
-        return urljoin(self.base_url, f"DramaList/Search?q={query}")
+        return urljoin(self.base_url, f"DramaList/Search?q={quote(query)}")
 
     def _subtitle_api_url(self, episode_id: int, kkey: str = "") -> str:
         return urljoin(self.base_url, f"Sub/{episode_id}?kkey={kkey}")
@@ -75,18 +74,19 @@ class KissKHApi:
             "Accept": "application/json, text/plain, */*",
             "Referer": referer or f"{self.site_domain}/",
         }
-        response = session.get(url, headers=headers)
+        response = session.get(url, headers=headers, timeout=30)
         response.raise_for_status()
-        response_json = response.json()
-        logger.debug("Response: %s", json.dumps(response_json, indent=4))
+        logger.debug("Response %s: %s", response.status_code, url)
         return response
 
-    def get_episode_ids(self, drama_id: int, start: int = 1, stop: int = sys.maxsize) -> dict[int, int]:
+    def get_episode_ids(
+        self, drama_id: int, start: int = 1, stop: int = sys.maxsize, skip_recap: bool = False
+    ) -> dict[float, int]:
         """Get episode ids for a specific drama."""
         drama_api_url = self._drama_api_url(drama_id=drama_id)
         response = self._request(drama_api_url)
         drama = Drama.model_validate(response.json())
-        return drama.get_episodes_ids(start=start, stop=stop)
+        return drama.get_episodes_ids(start=start, stop=stop, skip_recap=skip_recap)
 
     def get_subtitles(self, episode_id: int, kkey: str, *language_filter: str) -> list[SubItem]:
         """Get subtitle details for a specific episode."""
@@ -120,10 +120,14 @@ class KissKHApi:
             return None
 
         user_selection = 0
-        while user_selection < 1 or user_selection > len(dramas) + 1:
+        while user_selection < 1 or user_selection > len(dramas):
             for index, drama in enumerate(dramas, start=1):
                 logger.info("%s. %s", index, drama.title)
-            user_selection = int(input("Select a drama from above: "))
+            try:
+                user_selection = int(input("Select a drama from above: ") or "0")
+            except ValueError:
+                logger.warning("Please enter a valid number.")
+                user_selection = 0
 
         return dramas[user_selection - 1]
 

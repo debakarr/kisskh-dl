@@ -22,7 +22,7 @@ _playwright_available = None
 
 def _check_playwright() -> bool:
     """Check if Playwright is available without importing at module level."""
-    global _playwright_available
+    global _playwright_available  # noqa: PLW0603
     if _playwright_available is None:
         try:
             # Just check if the package is importable

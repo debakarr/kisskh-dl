@@ -6,23 +6,22 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
 class AESCipher:
-    def __init__(self, key, initialization_vector):
+    def __init__(self, key: str, initialization_vector: str) -> None:
         self.key = key.encode("utf8")
         self.initialization_vector = initialization_vector.encode("utf8")
 
-    def __get_cipher(self):
+    def __get_cipher(self) -> Cipher:
         return Cipher(algorithms.AES(self.key), modes.CBC(self.initialization_vector), backend=default_backend())
 
-    def decrypt(self, encrypted_text):
+    def decrypt(self, encrypted_text: str) -> str:
         cipher = self.__get_cipher()
         decryptor = cipher.decryptor()
-        decrypted_text = decryptor.update(b64decode(encrypted_text)) + decryptor.finalize()
+        raw_bytes = decryptor.update(b64decode(encrypted_text)) + decryptor.finalize()
         unpadder = padding.PKCS7(128).unpadder()
-        decrypted_text = unpadder.update(decrypted_text) + unpadder.finalize()
-        decrypted_text = decrypted_text.rstrip(b"\0").decode("utf8")
-        return decrypted_text
+        padded_bytes = unpadder.update(raw_bytes) + unpadder.finalize()
+        return padded_bytes.rstrip(b"\0").decode("utf8")
 
-    def encrypt(self, text):
+    def encrypt(self, text: str) -> str:
         cipher = self.__get_cipher()
         padder = padding.PKCS7(128).padder()
         padded_data = padder.update(text.encode("utf8")) + padder.finalize()

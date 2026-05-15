@@ -22,6 +22,27 @@ def _resolve_base_url() -> str:
     return os.getenv("KISSKH_BASE_URL", "https://kisskh.nl")
 
 
+def _sanitize_path_component(name: str) -> str:
+    """Sanitize a string for safe use as a single path segment.
+
+    Removes path separators, parent directory references, and other
+    characters that could enable path traversal attacks.
+    """
+    sanitized = re.sub(r'[\\/;:|*?"<>]', "_", name)
+    sanitized = sanitized.replace("..", "_")
+    return sanitized.strip(". ") or "_"
+
+
+def _format_episode(num: float) -> str:
+    """Format an episode number for use in filenames.
+
+    Integer episodes → ``E01``, ``E16``; float/recap episodes → ``E16.1``, ``E16.2``.
+    """
+    if num == int(num):
+        return f"E{int(num):02d}"
+    return f"E{num}"
+
+
 # ── Top-level CLI group ──────────────────────────────────────────────────
 
 
@@ -71,24 +92,24 @@ def kisskh(verbose):
 @click.option(
     "--key",
     "-k",
-    default=os.getenv("KISSKH_KEY"),
+    default=None,
     help="Subtitle decryption key (or set KISSKH_KEY env var).",
 )
 @click.option(
     "--initialization-vector",
     "-iv",
-    default=os.getenv("KISSKH_INITIALIZATION_VECTOR"),
+    default=None,
     help="Initialization vector for subtitle decryption (or set KISSKH_INITIALIZATION_VECTOR env var).",
 )
 @click.option(
     "--stream-key",
-    default=os.getenv("KISSKH_STREAM_KEY"),
+    default=None,
     help="Pre-generated kkey for stream endpoint (or set KISSKH_STREAM_KEY env var). "
     "Skips browser-based kkey generation.",
 )
 @click.option(
     "--sub-key",
-    default=os.getenv("KISSKH_SUB_KEY"),
+    default=None,
     help="Pre-generated kkey for subtitle endpoint (or set KISSKH_SUB_KEY env var). "
     "Skips browser-based kkey generation.",
 )
@@ -99,6 +120,12 @@ def kisskh(verbose):
     default=False,
     help="Download subtitles only, skip video download.",
 )
+@click.option(
+    "--skip-recap",
+    is_flag=True,
+    default=False,
+    help="Skip recap/special episodes (those with fractional episode numbers like 16.1, 16.2).",
+)
 def dl(
     drama_url_or_name: str,
     first: int,
@@ -107,11 +134,12 @@ def dl(
     sub_langs: list[str],
     output_dir: Path | str,
     decrypt_subtitle: bool,
-    key: str,
-    initialization_vector: str,
-    stream_key: str,
-    sub_key: str,
+    key: str | None,
+    initialization_vector: str | None,
+    stream_key: str | None,
+    sub_key: str | None,
     subs_only: bool = False,
+    skip_recap: bool = False,
 ) -> None:
     """Download episodes from kisskh.
 
@@ -120,6 +148,12 @@ def dl(
     """
     logger = logging.getLogger(__name__)
 
+    # Resolve secrets from env vars if not passed via CLI
+    key = key or os.getenv("KISSKH_KEY")
+    initialization_vector = initialization_vector or os.getenv("KISSKH_INITIALIZATION_VECTOR")
+    stream_key = stream_key or os.getenv("KISSKH_STREAM_KEY")
+    sub_key = sub_key or os.getenv("KISSKH_SUB_KEY")
+
     if decrypt_subtitle and not (key and initialization_vector):
         raise click.UsageError(
             "--key and --initialization-vector must be provided when --decrypt-subtitle is set. "
@@ -127,12 +161,15 @@ def dl(
             "environment variables."
         )
 
-    decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector) if decrypt_subtitle else None
+    decrypter: SubtitleDecrypter | None = None
+    if decrypt_subtitle:
+        assert key is not None and initialization_vector is not None  # validated above
+        decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector)
 
     base_url = _resolve_base_url()
     kisskh_api = KissKHApi(base_url=base_url)
     downloader = Downloader(referer=base_url)
-    episode_ids: dict[int, int] = {}
+    episode_ids: dict[float, int] = {}
 
     if validators.url(drama_url_or_name):
         parsed_url = urlparse(drama_url_or_name)
@@ -145,37 +182,38 @@ def dl(
         if episode_string := re.search(r"Episode-(\d+)", parsed_url.path):
             episode_number = episode_string.group(1)
         if episode_id and episode_number:
-            episode_ids = {int(episode_number): int(episode_id[0])}
-        drama_name = parsed_url.path.split("/")[2].replace("-", "_")
+            episode_ids = {float(episode_number): int(episode_id[0])}
+        drama_name = _sanitize_path_component(parsed_url.path.split("/")[2]).replace("-", "_")
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
         if drama is None:
             logger.warning("No drama found with the query provided...")
             return None
         drama_id = drama.id
-        drama_name = drama.title
+        drama_name = _sanitize_path_component(drama.title)
 
     if not episode_ids:
-        episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
+        episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last, skip_recap=skip_recap)
 
-    for episode_number, current_episode_id in episode_ids.items():  # type: ignore
-        logger.info("Getting details for Episode %s...", episode_number)
+    for episode_number, current_episode_id in episode_ids.items():
+        episode_tag = _format_episode(episode_number)
+        logger.info("Getting details for Episode %s...", episode_tag)
 
         # Generate or retrieve kkey tokens
         if stream_key and sub_key:
             kkeys = {"stream": stream_key, "sub": sub_key}
             logger.debug("Using kkey from command-line / environment variables")
         else:
-            logger.info("Generating authentication token for Episode %s...", episode_number)
+            logger.info("Generating authentication token for Episode %s...", episode_tag)
             try:
                 kkeys = kisskh_api.generate_kkeys(
                     drama_id=drama_id,
                     episode_id=current_episode_id,
-                    episode_number=episode_number,
+                    episode_number=int(episode_number),
                     drama_title=drama_name,
                 )
             except Exception as e:
-                logger.error("Failed to generate authentication token for Episode %s: %s", episode_number, e)
+                logger.error("Failed to generate authentication token for Episode %s: %s", episode_tag, e)
                 logger.error(
                     "Tip: Set KISSKH_STREAM_KEY and KISSKH_SUB_KEY environment variables "
                     "to skip browser-based kkey generation."
@@ -185,17 +223,17 @@ def dl(
         subtitles = kisskh_api.get_subtitles(current_episode_id, kkeys.get("sub", ""), *sub_langs)
 
         if subs_only:
-            filepath = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}"
-            logger.info("Downloading subtitles for Episode %s...", episode_number)
+            filepath = f"{output_dir}/{drama_name}/{drama_name}_{episode_tag}"
+            logger.info("Downloading subtitles for Episode %s...", episode_tag)
             downloader.download_subtitles(subtitles, filepath, decrypter)
             continue
 
         video_stream_url = kisskh_api.get_stream_url(current_episode_id, kkeys.get("stream", ""))
         if "tickcounter" in video_stream_url:
-            logger.warning("Episode %s still not released!", episode_number)
+            logger.warning("Episode %s still not released!", episode_tag)
             continue
 
-        filepath = f"{output_dir}/{drama_name}/{drama_name}_E{episode_number:02d}"
+        filepath = f"{output_dir}/{drama_name}/{drama_name}_{episode_tag}"
         logger.debug("Using video url: %s", video_stream_url)
         downloader.download_video_from_stream_url(video_stream_url, filepath, quality)
         downloader.download_subtitles(subtitles, filepath, decrypter)
@@ -244,7 +282,7 @@ def get_key(drama_url: str) -> None:
     if episode_string := re.search(r"Episode-(\d+)", parsed_url.path):
         episode_number = int(episode_string.group(1))
 
-    drama_slug = parsed_url.path.split("/")[2].replace("-", "_")
+    drama_slug = _sanitize_path_component(parsed_url.path.split("/")[2]).replace("-", "_")
 
     base_url = _resolve_base_url()
     kisskh_api = KissKHApi(base_url=base_url)

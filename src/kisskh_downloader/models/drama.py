@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class Episode(BaseModel):
     id: int
-    number: int
+    number: float
     sub: int
 
 
@@ -34,14 +34,24 @@ class Drama(BaseModel):
             data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
         return data
 
-    def get_episodes_ids(self, start: int, stop: int) -> dict[int, int]:
-        episode_ids = {}
-        if start < self.episodes[0].number or start > self.episodes[-1].number:
-            start = self.episodes[0].number
-        if stop > self.episodes[-1].number:
-            stop = self.episodes[-1].number
+    def get_episodes_ids(self, start: int, stop: int, skip_recap: bool = False) -> dict[float, int]:
+        """Map episode numbers to their API IDs within the given range.
 
-        for episode in self.episodes:
-            episode_ids[episode.number] = episode.id
+        Args:
+            start: First episode number (inclusive).
+            stop: Last episode number (inclusive).
+            skip_recap: If True, exclude episodes with fractional numbers (recaps).
 
-        return {episode_number: episode_ids[episode_number] for episode_number in range(start, stop + 1)}
+        Returns:
+            Dictionary mapping episode number → API ID.
+        """
+        sorted_eps = sorted(self.episodes, key=lambda e: e.number)
+
+        result: dict[float, int] = {}
+        for episode in sorted_eps:
+            if skip_recap and episode.number != int(episode.number):
+                continue
+            if start <= episode.number <= stop:
+                result[episode.number] = episode.id
+
+        return result
