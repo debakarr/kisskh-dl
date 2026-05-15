@@ -22,6 +22,17 @@ def _resolve_base_url() -> str:
     return os.getenv("KISSKH_BASE_URL", "https://kisskh.nl")
 
 
+def _sanitize_path_component(name: str) -> str:
+    """Sanitize a string for safe use as a single path segment.
+
+    Removes path separators, parent directory references, and other
+    characters that could enable path traversal attacks.
+    """
+    sanitized = re.sub(r'[\\/;:|*?"<>]', "_", name)
+    sanitized = sanitized.replace("..", "_")
+    return sanitized.strip(". ") or "_"
+
+
 # ── Top-level CLI group ──────────────────────────────────────────────────
 
 
@@ -71,24 +82,24 @@ def kisskh(verbose):
 @click.option(
     "--key",
     "-k",
-    default=os.getenv("KISSKH_KEY"),
+    default=None,
     help="Subtitle decryption key (or set KISSKH_KEY env var).",
 )
 @click.option(
     "--initialization-vector",
     "-iv",
-    default=os.getenv("KISSKH_INITIALIZATION_VECTOR"),
+    default=None,
     help="Initialization vector for subtitle decryption (or set KISSKH_INITIALIZATION_VECTOR env var).",
 )
 @click.option(
     "--stream-key",
-    default=os.getenv("KISSKH_STREAM_KEY"),
+    default=None,
     help="Pre-generated kkey for stream endpoint (or set KISSKH_STREAM_KEY env var). "
     "Skips browser-based kkey generation.",
 )
 @click.option(
     "--sub-key",
-    default=os.getenv("KISSKH_SUB_KEY"),
+    default=None,
     help="Pre-generated kkey for subtitle endpoint (or set KISSKH_SUB_KEY env var). "
     "Skips browser-based kkey generation.",
 )
@@ -107,10 +118,10 @@ def dl(
     sub_langs: list[str],
     output_dir: Path | str,
     decrypt_subtitle: bool,
-    key: str,
-    initialization_vector: str,
-    stream_key: str,
-    sub_key: str,
+    key: str | None,
+    initialization_vector: str | None,
+    stream_key: str | None,
+    sub_key: str | None,
     subs_only: bool = False,
 ) -> None:
     """Download episodes from kisskh.
@@ -120,6 +131,12 @@ def dl(
     """
     logger = logging.getLogger(__name__)
 
+    # Resolve secrets from env vars if not passed via CLI
+    key = key or os.getenv("KISSKH_KEY")
+    initialization_vector = initialization_vector or os.getenv("KISSKH_INITIALIZATION_VECTOR")
+    stream_key = stream_key or os.getenv("KISSKH_STREAM_KEY")
+    sub_key = sub_key or os.getenv("KISSKH_SUB_KEY")
+
     if decrypt_subtitle and not (key and initialization_vector):
         raise click.UsageError(
             "--key and --initialization-vector must be provided when --decrypt-subtitle is set. "
@@ -127,7 +144,10 @@ def dl(
             "environment variables."
         )
 
-    decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector) if decrypt_subtitle else None
+    decrypter: SubtitleDecrypter | None = None
+    if decrypt_subtitle:
+        assert key is not None and initialization_vector is not None  # validated above
+        decrypter = SubtitleDecrypter(key=key, initialization_vector=initialization_vector)
 
     base_url = _resolve_base_url()
     kisskh_api = KissKHApi(base_url=base_url)
@@ -146,14 +166,14 @@ def dl(
             episode_number = episode_string.group(1)
         if episode_id and episode_number:
             episode_ids = {int(episode_number): int(episode_id[0])}
-        drama_name = parsed_url.path.split("/")[2].replace("-", "_")
+        drama_name = _sanitize_path_component(parsed_url.path.split("/")[2]).replace("-", "_")
     else:
         drama = kisskh_api.get_drama_by_query(drama_url_or_name)
         if drama is None:
             logger.warning("No drama found with the query provided...")
             return None
         drama_id = drama.id
-        drama_name = drama.title
+        drama_name = _sanitize_path_component(drama.title)
 
     if not episode_ids:
         episode_ids = kisskh_api.get_episode_ids(drama_id=drama_id, start=first, stop=last)
@@ -244,7 +264,7 @@ def get_key(drama_url: str) -> None:
     if episode_string := re.search(r"Episode-(\d+)", parsed_url.path):
         episode_number = int(episode_string.group(1))
 
-    drama_slug = parsed_url.path.split("/")[2].replace("-", "_")
+    drama_slug = _sanitize_path_component(parsed_url.path.split("/")[2]).replace("-", "_")
 
     base_url = _resolve_base_url()
     kisskh_api = KissKHApi(base_url=base_url)

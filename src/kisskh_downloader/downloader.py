@@ -38,7 +38,7 @@ class Downloader:
             "verbose": logger.getEffectiveLevel() == logging.DEBUG,
             "retries": 10,
         }
-        logger.debug(f"Calling download with following options: {ydl_opts}")
+        logger.debug("Calling download with options: %s", ydl_opts)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download(video_stream_url)
 
@@ -51,7 +51,7 @@ class Downloader:
         :param filepath: file path where to download
         """
         for subtitle in subtitles:
-            logger.info(f"Downloading {subtitle.label} sub...")
+            logger.info("Downloading %s sub...", subtitle.label)
             extension = os.path.splitext(urlparse(subtitle.src).path)[-1]
             response = requests.get(subtitle.src, timeout=60)
             output_path = Path(f"{filepath}.{subtitle.land}{extension}")
