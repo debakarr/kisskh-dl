@@ -79,12 +79,14 @@ class KissKHApi:
         logger.debug("Response %s: %s", response.status_code, url)
         return response
 
-    def get_episode_ids(self, drama_id: int, start: int = 1, stop: int = sys.maxsize) -> dict[int, int]:
+    def get_episode_ids(
+        self, drama_id: int, start: int = 1, stop: int = sys.maxsize, skip_recap: bool = False
+    ) -> dict[float, int]:
         """Get episode ids for a specific drama."""
         drama_api_url = self._drama_api_url(drama_id=drama_id)
         response = self._request(drama_api_url)
         drama = Drama.model_validate(response.json())
-        return drama.get_episodes_ids(start=start, stop=stop)
+        return drama.get_episodes_ids(start=start, stop=stop, skip_recap=skip_recap)
 
     def get_subtitles(self, episode_id: int, kkey: str, *language_filter: str) -> list[SubItem]:
         """Get subtitle details for a specific episode."""

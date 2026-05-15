@@ -34,17 +34,24 @@ class Drama(BaseModel):
             data["episodes"] = sorted(data["episodes"], key=lambda episode: episode["number"])
         return data
 
-    def get_episodes_ids(self, start: int, stop: int) -> dict[int, int]:
-        episode_ids: dict[int, int] = {}
-        first_num = int(self.episodes[0].number)
-        last_num = int(self.episodes[-1].number)
+    def get_episodes_ids(self, start: int, stop: int, skip_recap: bool = False) -> dict[float, int]:
+        """Map episode numbers to their API IDs within the given range.
 
-        if start < first_num or start > last_num:
-            start = first_num
-        if stop > last_num:
-            stop = last_num
+        Args:
+            start: First episode number (inclusive).
+            stop: Last episode number (inclusive).
+            skip_recap: If True, exclude episodes with fractional numbers (recaps).
 
-        for episode in self.episodes:
-            episode_ids[int(episode.number)] = episode.id
+        Returns:
+            Dictionary mapping episode number → API ID.
+        """
+        sorted_eps = sorted(self.episodes, key=lambda e: e.number)
 
-        return {ep: episode_ids[ep] for ep in range(start, stop + 1) if ep in episode_ids}
+        result: dict[float, int] = {}
+        for episode in sorted_eps:
+            if skip_recap and episode.number != int(episode.number):
+                continue
+            if start <= episode.number <= stop:
+                result[episode.number] = episode.id
+
+        return result
