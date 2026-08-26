@@ -49,12 +49,12 @@ class KissKHApi:
         return urljoin(self.base_url, f"DramaList/Search?q={quote(query)}")
 
     def _subtitle_api_url(self, episode_id: int, kkey: str = "") -> str:
-        return urljoin(self.base_url, f"Sub/{episode_id}?kkey={kkey}")
+        return urljoin(self.base_url, f"Sub/{episode_id}?kkey={quote(kkey, safe='')}")
 
     def _stream_api_url(self, episode_id: int, kkey: str = "") -> str:
         return urljoin(
             self.base_url,
-            f"DramaList/Episode/{episode_id}.png?err=false&ts=null&time=null&kkey={kkey}",
+            f"DramaList/Episode/{episode_id}.png?err=false&ts=null&time=null&kkey={quote(kkey, safe='')}",
         )
 
     def _get_session(self) -> requests.Session:
