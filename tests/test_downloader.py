@@ -37,22 +37,26 @@ def test_download_subtitles_skips_unsupported_scheme(downloader, tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("headers", "body"),
+    ("headers", "use_oversize_body"),
     [
-        ({"Content-Length": str(20 * 1024 * 1024)}, None),
-        (None, b"x" * (11 * 1024 * 1024)),
+        ({"Content-Length": "2048"}, False),
+        (None, True),
     ],
+    ids=["declared-size", "streamed-size"],
 )
-def test_download_subtitles_enforces_size_limit(downloader, tmp_path, monkeypatch, headers, body):
+def test_download_subtitles_enforces_size_limit(downloader, tmp_path, monkeypatch, headers, use_oversize_body):
     subtitle = SubItem(src="https://example.com/sub.srt", label="English", land="en", default=False)
 
+    # Use a tiny limit for the test to avoid large allocations on CI
+    monkeypatch.setattr("kisskh_downloader.downloader.MAX_SUBTITLE_SIZE_BYTES", 1024)
+
     mock_response = MagicMock()
-    if headers:
+    if not use_oversize_body:
         mock_response.headers.get.return_value = headers["Content-Length"]
         mock_response.iter_content.return_value = []
     else:
         mock_response.headers.get.return_value = None
-        mock_response.iter_content.return_value = [body]
+        mock_response.iter_content.return_value = [b"x" * 2048]
     monkeypatch.setattr("kisskh_downloader.downloader.requests.get", lambda *a, **kw: mock_response)
 
     filepath = tmp_path / "show" / "show_E01"
