@@ -1,7 +1,7 @@
 [project]
 name = "kisskh-downloader"
 version = "0.2.3"
-description = "Simple downloaded for https://kisskh.co/"
+description = "Simple downloaded for https://kisskh.is/"
 readme = "README.md"
 authors = [{ name = "Debakar Roy", email = "allinonedibakar@gmail.com" }]
 requires-python = ">=3.10"

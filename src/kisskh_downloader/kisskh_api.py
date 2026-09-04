@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 class KissKHApi:
-    """API client for kisskh.co / kisskh.nl.
+    """API client for kisskh.is.
 
     Reads these environment variables (optional):
-        KISSKH_BASE_URL       - Base URL for the site (default: https://kisskh.nl)
+        KISSKH_BASE_URL       - Base URL for the site (default: https://kisskh.is)
         KISSKH_STREAM_KEY     - Pre-generated kkey for the stream endpoint
         KISSKH_SUB_KEY        - Pre-generated kkey for the subtitle endpoint
     """
@@ -27,7 +27,7 @@ class KissKHApi:
         if base_url is not None:
             resolved = base_url.rstrip("/")
         else:
-            resolved = os.getenv("KISSKH_BASE_URL", "https://kisskh.nl").rstrip("/")
+            resolved = os.getenv("KISSKH_BASE_URL", "https://kisskh.is").rstrip("/")
         self.base_url = f"{resolved}/api/"
         self.site_domain = resolved
         self.session: requests.Session | None = None

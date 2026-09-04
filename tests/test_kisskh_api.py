@@ -9,7 +9,7 @@ from kisskh_downloader.models.sub import SubItem
 
 @pytest.fixture(scope="module")
 def kisskh_api():
-    return KissKHApi(base_url="https://kisskh.nl")
+    return KissKHApi(base_url="https://kisskh.is")
 
 
 def test_get_episode_ids(kisskh_api):
@@ -60,7 +60,7 @@ def test_get_episode_ids(kisskh_api):
         10: 118960,
     }
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.nl/api/DramaList/Drama/44377?isq=false")
+    kisskh_api._request.assert_called_once_with("https://kisskh.is/api/DramaList/Drama/44377?isq=false")
 
     assert kisskh_api.get_episode_ids(44377, 10, 100) == {10: 118960, 11: 119505, 12: 119566, 13: 119964, 14: 120047}
 
@@ -113,7 +113,7 @@ def test_search_dramas_by_query(kisskh_api):
 
     search_result = kisskh_api.search_dramas_by_query("Crash")
 
-    kisskh_api._request.assert_called_once_with("https://kisskh.nl/api/DramaList/Search?q=Crash")
+    kisskh_api._request.assert_called_once_with("https://kisskh.is/api/DramaList/Search?q=Crash")
 
     assert search_result == Search.model_validate(
         [

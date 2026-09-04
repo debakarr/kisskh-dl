@@ -19,7 +19,7 @@ load_dotenv()
 
 def _resolve_base_url() -> str:
     """Return the base URL from env or default."""
-    return os.getenv("KISSKH_BASE_URL", "https://kisskh.nl")
+    return os.getenv("KISSKH_BASE_URL", "https://kisskh.is")
 
 
 def _sanitize_path_component(name: str) -> str:
@@ -143,7 +143,7 @@ def dl(
 ) -> None:
     """Download episodes from kisskh.
 
-    DRAMA_URL_OR_NAME can be a full URL (e.g. https://kisskh.nl/Drama/Some-Show?id=1234)
+    DRAMA_URL_OR_NAME can be a full URL (e.g. https://kisskh.is/Drama/Some-Show?id=1234)
     or a search query (e.g. "Stranger Things").
     """
     logger = logging.getLogger(__name__)
@@ -254,7 +254,7 @@ def get_key(drama_url: str) -> None:
 
     Example:
 
-        kisskh get-key "https://kisskh.nl/Drama/A-Business-Proposal/Episode-1?id=4608&ep=86192&page=0&pageSize=100"
+        kisskh get-key "https://kisskh.is/Drama/A-Business-Proposal/Episode-1?id=4608&ep=86192&page=0&pageSize=100"
 
     After getting the keys, you can export them as environment variables
     and run ``kisskh dl`` without needing a browser each time:
@@ -273,7 +273,7 @@ def get_key(drama_url: str) -> None:
     if not drama_id_str or not episode_id_str:
         raise click.UsageError(
             "URL must contain both ?id=... and &ep=... parameters. "
-            "Example: https://kisskh.nl/Drama/.../Episode-1?id=1234&ep=5678"
+            "Example: https://kisskh.is/Drama/.../Episode-1?id=1234&ep=5678"
         )
 
     drama_id = int(drama_id_str)

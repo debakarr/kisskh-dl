@@ -3,7 +3,7 @@
 <div align="center">
    <img src="https://i.imgur.com/nhQtOZa.png">
    <br>
-   <strong><i>Simple downloader for https://kisskh.nl/</i></strong>
+   <strong><i>Simple downloader for https://kisskh.is/</i></strong>
    <br>
    <a href="https://pypi.org/project/kisskh-downloader/">
    <img src="https://img.shields.io/pypi/v/kisskh-downloader?style=for-the-badge">
@@ -14,7 +14,7 @@
 
 ---
 
-👋 Welcome to the kisskh-downloader README! This package is a simple command-line tool for downloading shows from https://kisskh.nl/. Here's everything you need to know to get started:
+👋 Welcome to the kisskh-downloader README! This package is a simple command-line tool for downloading shows from https://kisskh.is/. Here's everything you need to know to get started:
 
 ## 💻 Installation
 
@@ -73,7 +73,7 @@ Options:
 #### Download entire series
 
 ```console
-kisskh dl "https://kisskh.nl/Drama/Island-Season-2?id=7000" -o .
+kisskh dl "https://kisskh.is/Drama/Island-Season-2?id=7000" -o .
 ```
 
 #### Search and download
@@ -89,19 +89,19 @@ kisskh dl "Stranger Things" -o .
 Downloads episode 4 to 8 of `Alchemy of Souls` in 720p:
 
 ```console
-kisskh dl "https://kisskh.nl/Drama/Alchemy-of-Souls?id=5043" -f 4 -l 8 -q 720p -o .
+kisskh dl "https://kisskh.is/Drama/Alchemy-of-Souls?id=5043" -f 4 -l 8 -q 720p -o .
 ```
 
 Downloads a single episode in 720p:
 
 ```console
-kisskh dl "https://kisskh.nl/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p -o .
+kisskh dl "https://kisskh.is/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p -o .
 ```
 
 You can also download a single episode by providing the episode URL:
 
 ```console
-kisskh dl "https://kisskh.nl/Drama/A-Business-Proposal/Episode-3?id=4608&ep=86439&page=0&pageSize=100" -o .
+kisskh dl "https://kisskh.is/Drama/A-Business-Proposal/Episode-3?id=4608&ep=86439&page=0&pageSize=100" -o .
 ```
 
 ### 📖 Download subtitles only
@@ -109,7 +109,7 @@ kisskh dl "https://kisskh.nl/Drama/A-Business-Proposal/Episode-3?id=4608&ep=8643
 To download subtitles without the video:
 
 ```console
-kisskh dl "https://kisskh.nl/Drama/Island-Season-2?id=7000" -s en -so -o .
+kisskh dl "https://kisskh.is/Drama/Island-Season-2?id=7000" -s en -so -o .
 ```
 
 The `-so` / `--subs-only` flag skips video download and saves only subtitle files.
@@ -123,7 +123,7 @@ For more options, use the `--help` flag.
 The site now requires a `kkey` authentication token. Use `get-key` to generate one from an episode URL:
 
 ```console
-kisskh get-key "https://kisskh.nl/Drama/A-Business-Proposal/Episode-1?id=4608&ep=86192&page=0&pageSize=100"
+kisskh get-key "https://kisskh.is/Drama/A-Business-Proposal/Episode-1?id=4608&ep=86192&page=0&pageSize=100"
 ```
 
 This opens a headless browser to extract the keys, then prints them:
@@ -140,7 +140,7 @@ This opens a headless browser to extract the keys, then prints them:
     set KISSKH_SUB_KEY=<long_hex_string>
 
   Then run your download command as usual:
-    kisskh dl "https://kisskh.nl/Drama/.../Episode-1?id=1234&ep=5678&page=0&pageSize=100" -o .
+    kisskh dl "https://kisskh.is/Drama/.../Episode-1?id=1234&ep=5678&page=0&pageSize=100" -o .
 ```
 
 ---
@@ -194,7 +194,7 @@ The site now requires a `kkey` authentication token for stream and subtitle API 
 
 | Variable | Description | Default |
 |---|---|---|
-| `KISSKH_BASE_URL` | Site base URL | `https://kisskh.nl` |
+| `KISSKH_BASE_URL` | Site base URL | `https://kisskh.is` |
 | `KISSKH_STREAM_KEY` | Pre-generated kkey for stream endpoint | — |
 | `KISSKH_SUB_KEY` | Pre-generated kkey for subtitle endpoint | — |
 | `KISSKH_KEY` | Subtitle decryption key | — |
@@ -207,5 +207,5 @@ The site now requires a `kkey` authentication token for stream and subtitle API 
 To enable debugging, use the `-vv` flag while running `kisskh dl`.
 
 ```console
-kisskh -vv dl "https://kisskh.nl/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p
+kisskh -vv dl "https://kisskh.is/Drama/A-Business-Proposal?id=4608" -f 3 -l 3 -q 720p
 ```
